@@ -3,6 +3,7 @@
 import subprocess
 import sys
 import os
+import re
 
 def main():
     outstanding_changes = subprocess.check_output(['git', 'status', '--porcelain'])
@@ -38,7 +39,30 @@ def push_to_personal(remote, branch):
     subprocess.check_call(['git', 'push', remote, 'HEAD:%s' % branch])
 
 def determine_pull_target():
-    pass
+# look for the most recent reachable commit that has a corresponding ref name
+# on origin, and return it.
+    print 'looking for an appropriate pull request target branch'
+# format:%d will show us all ref names for a commit.
+# decorate=full ensures that we get refs/remotes in front of origin,
+# insulating us from local branches that happen to have 'origin' in the name.
+    command = r"git log --decorate=full --pretty=format:%d"
+    ref_names = subprocess.check_output([command], shell=True).split('\n')
+# Now we have a list of ref names that look something like this:
+#
+# (refs/remotes/origin/devel, refs/remotes/alorente/devel)
+# (refs/remotes/origin/master)
+#
+# Git's rules on legal ref names are somewhat laxer than we might hope here.
+# the name-terminating tokens, parens and commas, are both legal within names.
+# This forces us into the rather awkward match you see below, rather than
+# something like '([^,)]*)'. So it goes..
+    extract_branch_name = r'.*refs/remotes/origin/(.*?)(?:\)$|, ).*'
+    branch_names = map(lambda x: re.sub(extract_branch_name, r'\1', x),
+                   filter(lambda x: re.search('refs/remotes/origin', x),
+                   ref_names))
+    pull_target = branch_names[0]
+    print 'looks like we should issue a pull for origin/%s' % pull_target
+    return pull_target
 
 def make_pull_request(target_branch):
     pass
