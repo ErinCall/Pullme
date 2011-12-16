@@ -9,11 +9,11 @@ def main():
     outstanding_changes = subprocess.check_output(['git', 'status', '--porcelain'])
     if outstanding_changes:
         confirm_continue()
-    current_branch = determine_current_branch()
+    head_branch = determine_head_branch()
     personal_remote = determine_personal_remote()
-    push_to_personal(personal_remote, current_branch)
-    target_branch = determine_pull_target()
-    make_pull_request(target_branch)
+    push_to_personal(personal_remote, head_branch)
+    pull_target = determine_pull_target()
+    make_pull_request(pull_target)
 
 
 def confirm_continue():
@@ -24,10 +24,10 @@ def confirm_continue():
         print "I don't know what you mean by '%s'" % confirm
         confirm_continue()
 
-def determine_current_branch():
-    current_branch = subprocess.check_output(['git', 'name-rev', '--name-only', 'HEAD']).rstrip()
-    print 'currently on %s' % current_branch
-    return current_branch
+def determine_head_branch():
+    head_branch = subprocess.check_output(['git', 'name-rev', '--name-only', 'HEAD']).rstrip()
+    print 'currently on %s' % head_branch
+    return head_branch
 
 def determine_personal_remote():
     personal_remote = os.environ['USER']
