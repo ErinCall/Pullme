@@ -4,10 +4,13 @@ import subprocess
 import sys
 
 def main():
-    current_branch = subprocess.check_output(['git', 'name-rev', '--name-only', 'HEAD'])
     outstanding_changes = subprocess.check_output(['git', 'status', '--porcelain'])
     if outstanding_changes:
         confirm_continue()
+    current_branch = subprocess.check_output(['git', 'name-rev', '--name-only', 'HEAD'])
+    push_to_personal(current_branch)
+    target_branch = determine_pull_target()
+    make_pull_request(target_branch)
 
 
 def confirm_continue():
@@ -17,5 +20,14 @@ def confirm_continue():
     elif confirm and confirm.lower() != 'y':
         print "I don't know what you mean by '%s'" % confirm
         confirm_continue()
+
+def push_to_personal(current_branch):
+    pass
+
+def determine_pull_target():
+    pass
+
+def make_pull_request(target_branch):
+    pass
 
 main()
