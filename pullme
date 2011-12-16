@@ -24,7 +24,7 @@ def confirm_continue():
         confirm_continue()
 
 def determine_current_branch():
-    return subprocess.check_output(['git', 'name-rev', '--name-only', 'HEAD'])
+    return subprocess.check_output(['git', 'name-rev', '--name-only', 'HEAD']).rstrip()
 
 def determine_personal_remote():
     return os.environ['USER']
