@@ -15,7 +15,7 @@ def main():
     push_to_personal(personal_remote, head_branch)
     pull_target = determine_pull_target()
     fork_path = determine_fork_path()
-    make_pull_request(fork_path, pull_target)
+    make_pull_request(fork_path, pull_target, head_branch)
 
 
 def confirm_continue():
@@ -81,7 +81,7 @@ def determine_fork_path():
     print 'looks like we should submit a pull request to %s' % fork_path
     return fork_path
 
-def make_pull_request(fork_path, pull_target):
+def make_pull_request(fork_path, pull_target, head_branch):
     pass
 
 try:
