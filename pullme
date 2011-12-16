@@ -30,7 +30,8 @@ def determine_personal_remote():
     return os.environ['USER']
 
 def push_to_personal(remote, branch):
-    pass
+    print "pushing to %s/%s" % (remote, branch)
+    subprocess.check_call(['git', 'push', remote, 'HEAD:%s' % branch])
 
 def determine_pull_target():
     pass
