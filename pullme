@@ -4,6 +4,7 @@ import subprocess
 import sys
 import os
 import re
+import urllib2
 
 def main():
     outstanding_changes = subprocess.check_output(
@@ -82,7 +83,19 @@ def determine_fork_path():
     return fork_path
 
 def make_pull_request(fork_path, pull_target, head_branch):
-    pass
+#TODO
+    title = 'Get my shiz'
+    body = 'Get this shiz up in here'
+#can I put method in the headers like this?
+    url = 'https://github.com/api/v2/json/pulls/%s' % fork_path
+    data = '&'.join([
+        'pull[base]=%s' % pull_target,
+        'pull[head]=%s' % head_branch,
+        'pull[title]=%s' % title,
+        'pull[body]=%s' % body,
+    ])
+    request = urllib2.Request(url, data=data, headers={'method': 'POST'})
+    urllib2.urlopen(request)
 
 try:
     main()
