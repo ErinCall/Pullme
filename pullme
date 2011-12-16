@@ -6,7 +6,8 @@ import os
 import re
 
 def main():
-    outstanding_changes = subprocess.check_output(['git', 'status', '--porcelain'])
+    outstanding_changes = subprocess.check_output(
+                            ['git', 'status', '--porcelain'])
     if outstanding_changes:
         confirm_continue()
     head_branch = determine_head_branch()
@@ -26,7 +27,8 @@ def confirm_continue():
         confirm_continue()
 
 def determine_head_branch():
-    head_branch = subprocess.check_output(['git', 'name-rev', '--name-only', 'HEAD']).rstrip()
+    head_branch = subprocess.check_output(['git', 'name-rev',
+                                        '--name-only', 'HEAD']).rstrip()
     print 'currently on %s' % head_branch
     return head_branch
 
@@ -43,11 +45,13 @@ def determine_pull_target():
 # look for the most recent reachable commit that has a corresponding ref name
 # on origin, and return it.
     print 'looking for an appropriate pull request target branch'
+
 # format:%d will show us all ref names for a commit.
 # decorate=full ensures that we get refs/remotes in front of origin,
 # insulating us from local branches that happen to have 'origin' in the name.
     command = "git log --decorate=full --pretty=format:%d"
     ref_names = subprocess.check_output([command], shell=True).split('\n')
+
 # Now we have a list of ref names that look something like this:
 #
 # (refs/remotes/origin/devel, refs/remotes/alorente/devel)
