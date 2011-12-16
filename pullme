@@ -13,7 +13,8 @@ def main():
     personal_remote = determine_personal_remote()
     push_to_personal(personal_remote, head_branch)
     pull_target = determine_pull_target()
-    make_pull_request(pull_target)
+    fork_path = determine_fork_path()
+    make_pull_request(fork_path, pull_target)
 
 
 def confirm_continue():
@@ -64,7 +65,19 @@ def determine_pull_target():
     print 'looks like we should issue a pull for origin/%s' % pull_target
     return pull_target
 
-def make_pull_request(target_branch):
+def determine_fork_path():
+# determine the path on github to the fork to which we're issuing a pull request
+    remotes_info = subprocess.check_output(['git', 'remote', '-v']).split('\n')
+    fork_url = filter(lambda x: re.search('fetch', x),
+               filter(lambda x: re.search('origin', x),
+               remotes_info))[0]
+#now we have a thing that looks like
+#origin git@github.com:emmadev/audience.git (fetch)
+    fork_path = re.sub(r'.*github.com:(.*)\.git \(fetch\).*', r'\1', fork_url)
+    print 'looks like we should submit a pull request to %s' % fork_path
+    return fork_path
+
+def make_pull_request(fork_path, pull_target):
     pass
 
 try:
