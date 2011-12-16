@@ -46,7 +46,7 @@ def determine_pull_target():
 # format:%d will show us all ref names for a commit.
 # decorate=full ensures that we get refs/remotes in front of origin,
 # insulating us from local branches that happen to have 'origin' in the name.
-    command = r"git log --decorate=full --pretty=format:%d"
+    command = "git log --decorate=full --pretty=format:%d"
     ref_names = subprocess.check_output([command], shell=True).split('\n')
 # Now we have a list of ref names that look something like this:
 #
