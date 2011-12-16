@@ -1,0 +1,21 @@
+#!/usr/bin/env python
+
+import subprocess
+import sys
+
+def main():
+    current_branch = subprocess.check_output(['git', 'name-rev', '--name-only', 'HEAD'])
+    outstanding_changes = subprocess.check_output(['git', 'status', '--porcelain'])
+    if outstanding_changes:
+        confirm_continue()
+
+
+def confirm_continue():
+    confirm = raw_input('There are outstanding changes. Continue? [Yn]')
+    if confirm and confirm.lower() == 'n':
+        sys.exit(1)
+    elif confirm and confirm.lower() != 'y':
+        print "I don't know what you mean by '%s'" % confirm
+        confirm_continue()
+
+main()
