@@ -39,4 +39,7 @@ def determine_pull_target():
 def make_pull_request(target_branch):
     pass
 
-main()
+try:
+    main()
+except subprocess.CalledProcessError, e:
+    sys.exit(e.returncode)
