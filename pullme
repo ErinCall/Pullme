@@ -2,6 +2,7 @@
 
 import subprocess
 import sys
+import os
 
 def main():
     outstanding_changes = subprocess.check_output(['git', 'status', '--porcelain'])
@@ -26,7 +27,7 @@ def determine_current_branch():
     return subprocess.check_output(['git', 'name-rev', '--name-only', 'HEAD'])
 
 def determine_personal_remote():
-    pass
+    return os.environ['USER']
 
 def push_to_personal(remote, branch):
     pass
