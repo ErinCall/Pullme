@@ -74,16 +74,15 @@ def determine_pull_target(settings):
 # the name-terminating tokens, parens and commas, are both legal within names.
 # This forces us into the rather awkward match you see below, rather than
 # something like '([^,)]*)'. So it goes..
-    extract_branch_name = r'.*refs/remotes/%s/(.*?)(?:\)$|, ).*' % \
-            settings['origin']
-    branch_names = map(lambda x: re.sub(extract_branch_name, r'\1', x),
-                   filter(lambda x:
-                        re.search('refs/remotes/%s' % settings['origin'], x),
-                   ref_names))
+    origin_ref = lambda x: re.search('refs/remotes/%s' % settings['origin'], x)
+    branch_names = filter(origin_ref, ref_names)
     if not branch_names:
         raise Exception('could not find any ref names at all on %s\n'
             '(perhaps you have no remote called that?)' % settings['origin'])
+    extract_branch_name = r'.*refs/remotes/%s/(.*?)(?:\)$|, ).*' % \
+            settings['origin']
     pull_target = branch_names[0]
+    pull_target = re.sub(extract_branch_name, r'\1', branch_names[0])
     print 'looks like we should issue a pull for %s/%s' % (settings['origin'], pull_target)
     return pull_target
 
