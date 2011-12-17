@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import yaml
 import subprocess
 import sys
 import os
@@ -7,17 +8,32 @@ import re
 import urllib2
 
 def main():
+    settings = load_settings()
     outstanding_changes = subprocess.check_output(
                             ['git', 'status', '--porcelain'])
     if outstanding_changes:
         confirm_continue()
     head_branch = determine_head_branch()
-    personal_remote = determine_personal_remote()
-    push_to_personal(personal_remote, head_branch)
-    pull_target = determine_pull_target()
-    fork_path = determine_fork_path()
+    push_to_personal(settings, head_branch)
+    pull_target = determine_pull_target(settings)
+    fork_path = determine_fork_path(settings)
     make_pull_request(fork_path, pull_target, head_branch)
 
+def load_settings():
+    settings = None
+    try:
+        config_file = open('%s/.pullmerc' % os.environ['HOME'])
+        settings = yaml.load(config_file.read())
+    except IOError, e:
+        if e.errno != 2: #file not found
+            raise e
+    if not settings:
+        settings = {} # an empty .pullmerc will load() to None
+    if not settings.get('origin'):
+        settings['origin'] = 'origin'
+    if not settings.get('personal_remote'):
+        settings['personal_remote'] = os.environ['USER']
+    return settings
 
 def confirm_continue():
     confirm = raw_input('There are outstanding changes. Continue? [Yn]')
@@ -33,16 +49,12 @@ def determine_head_branch():
     print 'currently on %s' % head_branch
     return head_branch
 
-def determine_personal_remote():
-    personal_remote = os.environ['USER']
-    print 'personal remote appears to be %s' % personal_remote
-    return personal_remote
+def push_to_personal(settings, branch):
+    print "pushing to %s/%s" % (settings['personal_remote'], branch)
+    subprocess.check_call(['git', 'push', settings['personal_remote'],
+                                                    'HEAD:%s' % branch])
 
-def push_to_personal(remote, branch):
-    print "pushing to %s/%s" % (remote, branch)
-    subprocess.check_call(['git', 'push', remote, 'HEAD:%s' % branch])
-
-def determine_pull_target():
+def determine_pull_target(settings):
 # look for the most recent reachable commit that has a corresponding ref name
 # on origin, and return it.
     print 'looking for an appropriate pull request target branch'
@@ -62,19 +74,24 @@ def determine_pull_target():
 # the name-terminating tokens, parens and commas, are both legal within names.
 # This forces us into the rather awkward match you see below, rather than
 # something like '([^,)]*)'. So it goes..
-    extract_branch_name = r'.*refs/remotes/origin/(.*?)(?:\)$|, ).*'
+    extract_branch_name = r'.*refs/remotes/%s/(.*?)(?:\)$|, ).*' % \
+            settings['origin']
     branch_names = map(lambda x: re.sub(extract_branch_name, r'\1', x),
-                   filter(lambda x: re.search('refs/remotes/origin', x),
+                   filter(lambda x:
+                        re.search('refs/remotes/%s' % settings['origin'], x),
                    ref_names))
+    if not branch_names:
+        raise Exception('could not find any ref names at all on %s\n'
+            '(perhaps you have no remote called that?)' % settings['origin'])
     pull_target = branch_names[0]
-    print 'looks like we should issue a pull for origin/%s' % pull_target
+    print 'looks like we should issue a pull for %s/%s' % (settings['origin'], pull_target)
     return pull_target
 
-def determine_fork_path():
+def determine_fork_path(settings):
 # determine the path on github to the fork to which we're issuing a pull request
     remotes_info = subprocess.check_output(['git', 'remote', '-v']).split('\n')
     fork_url = filter(lambda x: re.search('fetch', x),
-               filter(lambda x: re.search('origin', x),
+               filter(lambda x: re.search(settings['origin'], x),
                remotes_info))[0]
 #now we have a thing that looks like
 #origin git@github.com:emmadev/audience.git (fetch)
@@ -105,6 +122,5 @@ except subprocess.CalledProcessError, e:
 
 #TODO:
 # * confirm that we have the right branch name
-# * configure remote names
 # * If the most recent reachable commit with a name on origin has multiple names
 #         on origin, bail and ask for help
