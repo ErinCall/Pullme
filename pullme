@@ -63,7 +63,7 @@ def determine_pull_target(settings):
 # decorate=full ensures that we get refs/remotes in front of origin,
 # insulating us from local branches that happen to have 'origin' in the name.
     command = "git log --decorate=full --pretty=format:%d"
-    ref_names = subprocess.check_output([command], shell=True).split('\n')
+    ref_names = subprocess.Popen([command], shell=True, stdout=subprocess.PIPE)
 
 # Now we have a list of ref names that look something like this:
 #
@@ -74,16 +74,21 @@ def determine_pull_target(settings):
 # the name-terminating tokens, parens and commas, are both legal within names.
 # This forces us into the rather awkward match you see below, rather than
 # something like '([^,)]*)'. So it goes..
-    origin_ref = lambda x: re.search('refs/remotes/%s' % settings['origin'], x)
-    branch_names = filter(origin_ref, ref_names)
-    if not branch_names:
+    origin_ref_line = ''
+    while not origin_ref_line:
+        line = ref_names.stdout.readline()
+        if re.search('refs/remotes/%s' % settings['origin'], line):
+            origin_ref_line = line.strip()
+    ref_names.stdout.close()
+    del ref_names
+    if not origin_ref_line:
         raise Exception('could not find any ref names at all on %s\n'
             '(perhaps you have no remote called that?)' % settings['origin'])
     extract_branch_name = r'.*refs/remotes/%s/(.*?)(?:\)$|, ).*' % \
             settings['origin']
-    pull_target = branch_names[0]
-    pull_target = re.sub(extract_branch_name, r'\1', branch_names[0])
-    print 'looks like we should issue a pull for %s/%s' % (settings['origin'], pull_target)
+    pull_target = re.sub(extract_branch_name, r'\1', origin_ref_line)
+    print 'looks like the target remote branch is %s/%s' % \
+                                    (settings['origin'], pull_target)
     return pull_target
 
 def determine_fork_path(settings):
