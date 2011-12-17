@@ -128,3 +128,7 @@ except subprocess.CalledProcessError, e:
 # * confirm that we have the right branch name
 # * If the most recent reachable commit with a name on origin has multiple names
 #         on origin, bail and ask for help
+# * check return code of the Popen
+# * help/usage string
+# * local .pullmerc
+# * -- options to override .pullmerc
