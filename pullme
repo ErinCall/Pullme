@@ -75,11 +75,13 @@ def determine_pull_target(settings):
 # This forces us into the rather awkward match you see below, rather than
 # something like '([^,)]*)'. So it goes..
     origin_ref_line = ''
-    while not origin_ref_line:
+    while not origin_ref_line and ref_names.poll() is None:
         line = ref_names.stdout.readline()
         if re.search('refs/remotes/%s' % settings['origin'], line):
             origin_ref_line = line.strip()
     ref_names.stdout.close()
+    if ref_names.poll():
+        sys.exit(ref_names.poll())
     del ref_names
     if not origin_ref_line:
         raise Exception('could not find any ref names at all on %s\n'
@@ -128,7 +130,6 @@ except subprocess.CalledProcessError, e:
 # * confirm that we have the right branch name
 # * If the most recent reachable commit with a name on origin has multiple names
 #         on origin, bail and ask for help
-# * check return code of the Popen
 # * help/usage string
 # * local .pullmerc
 # * -- options to override .pullmerc
