@@ -20,19 +20,24 @@ def main():
     make_pull_request(fork_path, pull_target, head_branch)
 
 def load_settings():
+    settings = read_config_file('%s/.pullmerc' % os.environ['HOME'])
+    settings.update(read_config_file('.pullmerc'))
+    if not settings.get('origin'):
+        settings['origin'] = 'origin'
+    if not settings.get('personal_remote'):
+        settings['personal_remote'] = os.environ['USER']
+    return settings
+
+def read_config_file(path):
     settings = None
     try:
-        config_file = open('%s/.pullmerc' % os.environ['HOME'])
+        config_file = open(path)
         settings = yaml.load(config_file.read())
     except IOError, e:
         if e.errno != 2: #file not found
             raise e
     if not settings:
-        settings = {} # an empty .pullmerc will load() to None
-    if not settings.get('origin'):
-        settings['origin'] = 'origin'
-    if not settings.get('personal_remote'):
-        settings['personal_remote'] = os.environ['USER']
+        settings = {} # an empty config will load() to None
     return settings
 
 def confirm_continue():
@@ -131,5 +136,4 @@ except subprocess.CalledProcessError, e:
 # * If the most recent reachable commit with a name on origin has multiple names
 #         on origin, bail and ask for help
 # * help/usage string
-# * local .pullmerc
 # * -- options to override .pullmerc
