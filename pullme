@@ -20,8 +20,8 @@ def main():
     make_pull_request(fork_path, pull_target, head_branch)
 
 def load_settings():
-    settings = read_config_file('%s/.pullmerc' % os.environ['HOME'])
-    settings.update(read_config_file('.pullmerc'))
+    settings = read_config_file('%s/.pullmeconfig' % os.environ['HOME'])
+    settings.update(read_config_file('.pullmeconfig'))
     if not settings.get('origin'):
         settings['origin'] = 'origin'
     if not settings.get('personal_remote'):
@@ -136,4 +136,4 @@ except subprocess.CalledProcessError, e:
 # * If the most recent reachable commit with a name on origin has multiple names
 #         on origin, bail and ask for help
 # * help/usage string
-# * -- options to override .pullmerc
+# * -- options to override .pullmeconfig
