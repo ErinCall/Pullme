@@ -6,6 +6,7 @@ import sys
 import os
 import re
 import urllib2
+import argparse
 
 def main():
     settings = load_settings()
@@ -22,6 +23,30 @@ def main():
 def load_settings():
     settings = read_config_file('%s/.pullmeconfig' % os.environ['HOME'])
     settings.update(read_config_file('.pullmeconfig'))
+    parser = argparse.ArgumentParser(
+        description="""
+Submit a pull request for the currently-checked-out branch. Particularly
+targeted at working with long-running feature branches, pullme tries to guess
+what branch you want your code pulled into. Contrast with Github's system of
+defining a "base branch" and pointing all pull requests at that by default.
+""",
+        epilog="""
+These options can also be set by writing yaml into ~/.pullmeconfig or
+WORK_DIR/.pullmeconfig. In the case of a conflict, command-line options get
+highest priority, then the work dir's config, and the config in your homedir
+comes last.
+"""
+    )
+    parser.add_argument('-o', '--origin', help='The remote-name for the repo '
+                        "into which you want your code pulled. Defaults to 'origin'.")
+    parser.add_argument('-p', '--personal-remote', help='the remote-name for '
+                        'your fork on github. Defaults to $USER.')
+    args = parser.parse_args()
+    if args.origin is not None:
+        settings['origin'] = args.origin
+    if args.personal_remote is not None:
+        settings['personal_remote'] = args.personal_remote
+
     if not settings.get('origin'):
         settings['origin'] = 'origin'
     if not settings.get('personal_remote'):
@@ -134,5 +159,3 @@ except subprocess.CalledProcessError, e:
 # * confirm that we have the right branch name
 # * If the most recent reachable commit with a name on origin has multiple names
 #         on origin, bail and ask for help
-# * help/usage string
-# * -- options to override .pullmeconfig
