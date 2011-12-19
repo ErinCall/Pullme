@@ -57,7 +57,7 @@ comes last.
     if not settings.get('personal_remote'):
         settings['personal_remote'] = os.environ['USER']
     if not settings.get('assume'):
-        settings['assume'] = True
+        settings['assume'] = False
     return settings
 
 def read_config_file(path):
