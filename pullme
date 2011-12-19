@@ -80,14 +80,27 @@ def determine_head_branch():
 
 def push_to_personal(settings, branch):
     remote = settings['personal_remote']
-    confirm = raw_input('Do you want to push to %s/%s? [Yn] ' % (remote, branch))
+    correct = confirm_assumptions(
+        'Do you want to push to %s/%s?' % (remote, branch),
+        'To what %s would you like to push? ',
+        remote=settings['personal_remote'],
+        branch=branch,
+    )
+    subprocess.check_call(['git', 'push', correct['remote'],
+                            'HEAD:%s' % correct['branch']])
+
+def confirm_assumptions(confirm_message, correction_message, **kwargs):
+    confirm = raw_input('%s [Yn] ' % confirm_message)
+    corrections = {}
     if confirm.lower() == 'n':
-        remote = raw_input('To what remote would you like to push? ')
-        branch = raw_input('to what branch would you like to push? ')
+        for correction in kwargs:
+            corrections[correction] = raw_input(correction_message % correction)
+        return corrections
     elif confirm and confirm.lower() != 'y':
         print "I don't know what you mean by '%s'" % confirm
-        push_to_personal(settings, branch)
-    subprocess.check_call(['git', 'push', remote, 'HEAD:%s' % branch])
+        confirm_assumptions(confirm_message, define_message, **kwargs)
+    else:
+        return kwargs
 
 def determine_pull_target(settings):
 # look for the most recent reachable commit that has a corresponding ref name
@@ -125,16 +138,13 @@ def determine_pull_target(settings):
     extract_branch_name = r'.*refs/remotes/%s/(.*?)(?:\)$|, ).*' % remote
     pull_target = re.sub(extract_branch_name, r'\1', origin_ref_line)
 
-    confirm = raw_input('Do you want to submit a pull request to %s/%s? [Yn] ' %
-                                                        (remote, pull_target))
-    if confirm.lower() == 'n':
-        remote = raw_input('To what remote would you like to submit it? ')
-        pull_target = raw_input('to what branch would you like to submit it? ')
-    elif confirm and confirm.lower() != 'y':
-        print "I don't know what you mean by '%s'" % confirm
-        determine_pull_target(settings)
-
-    return pull_target
+    correct = confirm_assumptions(
+        'Do you want to submit a pull request to %s/%s?' %
+                                            (remote, pull_target),
+        'To what %s would you like to submit your request? ',
+        branch=pull_target,
+    )
+    return correct['branch']
 
 def determine_fork_path(settings):
 # determine the path on github to the fork to which we're issuing a pull request
