@@ -42,7 +42,7 @@ comes last.
                         "'origin'.")
     parser.add_argument('-p', '--personal-remote', help='the remote-name for '
                         'your fork on github. Defaults to $USER.')
-    parser.add_argument('-a', '--assume', type=bool, help='Proceed on '
+    parser.add_argument('-a', '--assume', action='store_true', help='Proceed on '
                         'assumptions without confirming them (LIKE A BOSS).')
     args = parser.parse_args()
     if args.origin is not None:
