@@ -66,8 +66,8 @@ def read_config_file(path):
     return settings
 
 def confirm_continue():
-    confirm = raw_input('There are outstanding changes. Continue? [Yn]')
-    if confirm and confirm.lower() == 'n':
+    confirm = raw_input('There are outstanding changes. Continue? [Yn] ')
+    if confirm.lower() == 'n':
         sys.exit(1)
     elif confirm and confirm.lower() != 'y':
         print "I don't know what you mean by '%s'" % confirm
@@ -76,13 +76,18 @@ def confirm_continue():
 def determine_head_branch():
     head_branch = subprocess.check_output(['git', 'name-rev',
                                         '--name-only', 'HEAD']).rstrip()
-    print 'currently on %s' % head_branch
     return head_branch
 
 def push_to_personal(settings, branch):
-    print "pushing to %s/%s" % (settings['personal_remote'], branch)
-    subprocess.check_call(['git', 'push', settings['personal_remote'],
-                                                    'HEAD:%s' % branch])
+    remote = settings['personal_remote']
+    confirm = raw_input('Do you want to push to %s/%s? [Yn] ' % (remote, branch))
+    if confirm.lower() == 'n':
+        remote = raw_input('To what remote would you like to push? ')
+        branch = raw_input('to what branch would you like to push? ')
+    elif confirm and confirm.lower() != 'y':
+        print "I don't know what you mean by '%s'" % confirm
+        push_to_personal(settings, branch)
+    subprocess.check_call(['git', 'push', remote, 'HEAD:%s' % branch])
 
 def determine_pull_target(settings):
 # look for the most recent reachable commit that has a corresponding ref name
@@ -104,10 +109,11 @@ def determine_pull_target(settings):
 # the name-terminating tokens, parens and commas, are both legal within names.
 # This forces us into the rather awkward match you see below, rather than
 # something like '([^,)]*)'. So it goes..
+    remote = settings['origin']
     origin_ref_line = ''
     while not origin_ref_line and ref_names.poll() is None:
         line = ref_names.stdout.readline()
-        if re.search('refs/remotes/%s' % settings['origin'], line):
+        if re.search('refs/remotes/%s' % remote, line):
             origin_ref_line = line.strip()
     ref_names.stdout.close()
     if ref_names.poll():
@@ -115,12 +121,19 @@ def determine_pull_target(settings):
     del ref_names
     if not origin_ref_line:
         raise Exception('could not find any ref names at all on %s\n'
-            '(perhaps you have no remote called that?)' % settings['origin'])
-    extract_branch_name = r'.*refs/remotes/%s/(.*?)(?:\)$|, ).*' % \
-            settings['origin']
+            '(perhaps you have no remote called that?)' % remote)
+    extract_branch_name = r'.*refs/remotes/%s/(.*?)(?:\)$|, ).*' % remote
     pull_target = re.sub(extract_branch_name, r'\1', origin_ref_line)
-    print 'looks like the target remote branch is %s/%s' % \
-                                    (settings['origin'], pull_target)
+
+    confirm = raw_input('Do you want to submit a pull request to %s/%s? [Yn] ' %
+                                                        (remote, pull_target))
+    if confirm.lower() == 'n':
+        remote = raw_input('To what remote would you like to submit it? ')
+        pull_target = raw_input('to what branch would you like to submit it? ')
+    elif confirm and confirm.lower() != 'y':
+        print "I don't know what you mean by '%s'" % confirm
+        determine_pull_target(settings)
+
     return pull_target
 
 def determine_fork_path(settings):
@@ -132,7 +145,6 @@ def determine_fork_path(settings):
 #now we have a thing that looks like
 #origin git@github.com:emmadev/audience.git (fetch)
     fork_path = re.sub(r'.*github.com:(.*)\.git \(fetch\).*', r'\1', fork_url)
-    print 'looks like we should submit a pull request to %s' % fork_path
     return fork_path
 
 def make_pull_request(fork_path, pull_target, head_branch):
@@ -156,6 +168,5 @@ except subprocess.CalledProcessError, e:
 
 
 #TODO:
-# * confirm that we have the right branch name
 # * If the most recent reachable commit with a name on origin has multiple names
 #         on origin, bail and ask for help
