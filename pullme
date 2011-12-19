@@ -184,8 +184,3 @@ try:
     main()
 except subprocess.CalledProcessError, e:
     sys.exit(e.returncode)
-
-
-#TODO:
-# * If the most recent reachable commit with a name on origin has multiple names
-#         on origin, bail and ask for help
