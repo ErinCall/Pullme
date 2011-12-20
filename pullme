@@ -8,6 +8,7 @@ import re
 import urllib2
 import argparse
 import tempfile
+import json
 
 def main():
     settings = load_settings()
@@ -19,8 +20,11 @@ def main():
     head_branch = determine_head_branch()
     push_to_personal(settings, head_branch)
     pull_target = determine_pull_target(settings)
-    fork_path = determine_fork_path(settings)
-    make_pull_request(settings, fork_path, pull_target, head_branch)
+    origin_github_path = github_path_from_remote_name(settings['origin'])
+    personal_github_path = \
+                    github_path_from_remote_name(settings['personal_remote'])
+    make_pull_request(settings, origin_github_path,
+                            personal_github_path, pull_target, head_branch)
 
 def load_settings():
     settings = read_config_file('%s/.pullmeconfig' % os.environ['HOME'])
@@ -157,28 +161,34 @@ def determine_pull_target(settings):
     )
     return correct['branch']
 
-def determine_fork_path(settings):
-# determine the path on github to the fork to which we're issuing a pull request
+def github_path_from_remote_name(remote):
     remotes_info = subprocess.check_output(['git', 'remote', '-v']).split('\n')
     fork_url = filter(lambda x: re.search('fetch', x),
-               filter(lambda x: re.search(settings['origin'], x),
+               filter(lambda x: re.search(remote, x),
                remotes_info))[0]
 #now we have a thing that looks like
 #origin git@github.com:emmadev/audience.git (fetch)
-    fork_path = re.sub(r'.*github.com[:/](.*)\.git \(fetch\).*', r'\1', fork_url)
-    return fork_path
+    github_path = re.sub(r'.*github.com[:/](.*)\.git \(fetch\).*', r'\1', fork_url)
+    return github_path
 
-def make_pull_request(settings, fork_path, pull_target, head_branch):
+def make_pull_request(settings, origin_github_path,
+                    personal_github_path, pull_target, head_branch):
     title, body = get_description_from_editor(settings, pull_target)
-    url = 'https://github.com/api/v2/json/pulls/%s' % fork_path
-    data = '&'.join([
-        'pull[base]=%s' % pull_target,
-        'pull[head]=%s' % head_branch,
-        'pull[title]=%s' % title,
-        'pull[body]=%s' % body,
-    ])
+    url = 'https://api.github.com/repos/%s/pulls' % origin_github_path
+    print 'pulling to %s' % url
+    username = personal_github_path.split('/')[0]
+    data = json.dumps({
+        'title': title,
+        'body': body,
+        'head': '%s:%s' % (username, head_branch),
+        'base': pull_target,
+    })
     request = urllib2.Request(url, data=data)
-    urllib2.urlopen(request)
+    try:
+        urllib2.urlopen(request)
+    except urllib2.HTTPError, e:
+        print e.msg
+        print e.read()
 
 def get_description_from_editor(settings, pull_target, filename=None):
     if not filename:
