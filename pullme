@@ -88,9 +88,8 @@ def confirm_continue(settings, confirmation_message):
         confirm_continue(settings, confirmation_message)
 
 def determine_head_branch():
-    head_branch = subprocess.check_output(['git', 'name-rev',
+    return subprocess.check_output(['git', 'name-rev',
                                         '--name-only', 'HEAD']).rstrip()
-    return head_branch
 
 def push_to_personal(settings, branch):
     remote = settings['personal_remote']
@@ -168,8 +167,7 @@ def github_path_from_remote_name(remote):
                remotes_info))[0]
 #now we have a thing that looks like
 #origin git@github.com:emmadev/audience.git (fetch)
-    github_path = re.sub(r'.*github.com[:/](.*)\.git \(fetch\).*', r'\1', fork_url)
-    return github_path
+    return re.sub(r'.*github.com[:/](.*)\.git \(fetch\).*', r'\1', fork_url)
 
 def make_pull_request(settings, origin_github_path,
                     personal_github_path, pull_target, head_branch):
