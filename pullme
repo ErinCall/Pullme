@@ -202,7 +202,9 @@ def make_pull_request(settings, origin_github_path,
     auth = base64.b64encode('%s:%s' % (username, settings['password']))
     request.add_header('Authorization', 'Basic %s' % auth)
     try:
-        urllib2.urlopen(request)
+        response = json.loads(urllib2.urlopen(request).read())
+        print "Successfully opened pull request #%s" % response['number']
+        print response['html_url']
     except urllib2.HTTPError, e:
         error = json.loads(e.read())
         sys.stderr.write("Pull request failed:\n")
