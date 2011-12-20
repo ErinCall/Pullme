@@ -204,8 +204,11 @@ def make_pull_request(settings, origin_github_path,
     try:
         urllib2.urlopen(request)
     except urllib2.HTTPError, e:
-        print e.msg
-        print e.read()
+        error = json.loads(e.read())
+        sys.stderr.write("Pull request failed:\n")
+        sys.stderr.write(error['message'] + "\n")
+        for sub_error in error['errors']:
+            sys.stderr.write(sub_error['message'] + "\n")
 
 def get_description_from_editor(settings, pull_target, filename=None):
     if not filename:
