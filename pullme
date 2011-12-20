@@ -9,6 +9,8 @@ import urllib2
 import argparse
 import tempfile
 import json
+import getpass
+import base64
 
 def main():
     settings = load_settings()
@@ -27,7 +29,10 @@ def main():
                             personal_github_path, pull_target, head_branch)
 
 def load_settings():
-    settings = read_config_file('%s/.pullmeconfig' % os.environ['HOME'])
+    main_config_path = '%s/.pullmeconfig' % os.environ['HOME']
+    if not os.path.exists(main_config_path):
+        establish_main_config(main_config_path)
+    settings = read_config_file(main_config_path)
     settings.update(read_config_file('.pullmeconfig'))
     parser = argparse.ArgumentParser(
         description="""
@@ -65,6 +70,17 @@ comes last.
     if not settings.get('assume'):
         settings['assume'] = False
     return settings
+
+def establish_main_config(config_path):
+    print 'Looks like this is your first run. We need to establish ' \
+                                            'some initial settings...'
+
+    descriptor, filename = tempfile.mkstemp()
+    config_file = open(filename, 'w')
+    password = getpass.getpass('Enter your password: ')
+    config_file.write("'password': '%s'" % password)
+    config_file.close()
+    os.rename(filename, config_path)
 
 def read_config_file(path):
     settings = None
@@ -182,6 +198,8 @@ def make_pull_request(settings, origin_github_path,
         'base': pull_target,
     })
     request = urllib2.Request(url, data=data)
+    auth = base64.b64encode('%s:%s' % (username, settings['password']))
+    request.add_header('Authorization', 'Basic %s' % auth)
     try:
         urllib2.urlopen(request)
     except urllib2.HTTPError, e:
