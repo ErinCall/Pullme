@@ -7,6 +7,7 @@ import os
 import re
 import urllib2
 import argparse
+import tempfile
 
 def main():
     settings = load_settings()
@@ -167,9 +168,34 @@ def determine_fork_path(settings):
     return fork_path
 
 def make_pull_request(fork_path, pull_target, head_branch):
-#TODO
-    title = 'Get my shiz'
-    body = 'Get this shiz up in here'
+    descriptor, filename = tempfile.mkstemp()
+    pull_message_file = open(filename, 'w')
+    pull_message_file.write("""
+
+
+#put your pull request message here.
+#As with a git commit message, the first line is the title, then there is a
+#blank line, and any subsequent lines are description.
+#lines starting with a hash are comments.
+""")
+    pull_message_file.flush()
+    pull_message_file.close()
+
+    editor = os.environ.get('EDITOR', '/bin/ed')
+    subprocess.check_call([editor, filename])
+
+    pull_message_file = open(filename, 'r')
+    title = pull_message_file.readline().strip()
+    pull_message_file.readline()
+    body = ''
+    for line in pull_message_file:
+        if re.match('^[^#]', line):
+            body += line.rstrip() + "\n"
+    body = body.rstrip()
+
+    pull_message_file.close()
+    os.unlink(filename)
+
     url = 'https://github.com/api/v2/json/pulls/%s' % fork_path
     data = '&'.join([
         'pull[base]=%s' % pull_target,
