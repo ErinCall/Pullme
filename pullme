@@ -23,10 +23,10 @@ def main():
     head_branch = determine_head_branch()
     push_to_personal(settings, head_branch)
     pull_target = determine_pull_target(settings)
-    origin_github_path = github_path_from_remote_name(settings['origin'])
+    upstream_github_path = github_path_from_remote_name(settings['upstream'])
     personal_github_path = \
-                    github_path_from_remote_name(settings['personal_remote'])
-    make_pull_request(settings, origin_github_path,
+                    github_path_from_remote_name(settings['personal'])
+    make_pull_request(settings, upstream_github_path,
                             personal_github_path, pull_target, head_branch)
 
 def load_settings():
@@ -49,25 +49,25 @@ highest priority, then the work dir's config, and the config in your homedir
 comes last.
 """
     )
-    parser.add_argument('-o', '--origin', help='The remote-name for the repo '
+    parser.add_argument('-u', '--upstream', help='The remote-name for the repo '
                         "into which you want your code pulled. Defaults to "
                         "'origin'.")
-    parser.add_argument('-p', '--personal-remote', help='the remote-name for '
+    parser.add_argument('-p', '--personal', help='the remote-name for '
                         'your fork on github. Defaults to $USER.')
     parser.add_argument('-a', '--assume', action='store_true', help='Proceed on '
                         'assumptions without confirming them (LIKE A BOSS).')
     args = parser.parse_args()
-    if args.origin is not None:
-        settings['origin'] = args.origin
-    if args.personal_remote is not None:
-        settings['personal_remote'] = args.personal_remote
+    if args.upstream is not None:
+        settings['upstream'] = args.upstream
+    if args.personal is not None:
+        settings['personal'] = args.personal
     if args.assume is not None:
         settings['assume'] = args.assume
 
-    if not settings.get('origin'):
-        settings['origin'] = 'origin'
-    if not settings.get('personal_remote'):
-        settings['personal_remote'] = os.environ['USER']
+    if not settings.get('upstream'):
+        settings['upstream'] = 'origin'
+    if not settings.get('personal'):
+        settings['personal'] = os.environ['USER']
     if not settings.get('assume'):
         settings['assume'] = False
     return settings
@@ -109,11 +109,11 @@ def determine_head_branch():
                                         '--name-only', 'HEAD']).rstrip()
 
 def push_to_personal(settings, branch):
-    remote = settings['personal_remote']
+    remote = settings['personal']
     correct = confirm_assumptions(settings,
         'Do you want to push to %s/%s?' % (remote, branch),
         'To what %s would you like to push? ',
-        remote=settings['personal_remote'],
+        remote=settings['personal'],
         branch=branch,
     )
     subprocess.check_call(['git', 'push', correct['remote'],
@@ -135,12 +135,12 @@ def confirm_assumptions(settings, confirm_message, correction_message, **kwargs)
 
 def determine_pull_target(settings):
 # look for the most recent reachable commit that has a corresponding ref name
-# on origin, and return it.
+# on upstream, and return it.
     print 'looking for an appropriate pull request target branch'
 
 # format:%d will show us all ref names for a commit.
-# decorate=full ensures that we get refs/remotes in front of origin,
-# insulating us from local branches that happen to have 'origin' in the name.
+# decorate=full ensures that we get refs/remotes in front of upstream,
+# insulating us from local branches that happen to have 'upstream' in the name.
     command = "git log --decorate=full --pretty=format:%d"
     ref_names = subprocess.Popen([command], shell=True, stdout=subprocess.PIPE)
 
@@ -153,21 +153,21 @@ def determine_pull_target(settings):
 # the name-terminating tokens, parens and commas, are both legal within names.
 # This forces us into the rather awkward match you see below, rather than
 # something like '([^,)]*)'. So it goes..
-    remote = settings['origin']
-    origin_ref_line = ''
-    while not origin_ref_line and ref_names.poll() is None:
+    remote = settings['upstream']
+    upstream_ref_line = ''
+    while not upstream_ref_line and ref_names.poll() is None:
         line = ref_names.stdout.readline()
         if re.search('refs/remotes/%s' % remote, line):
-            origin_ref_line = line.strip()
+            upstream_ref_line = line.strip()
     ref_names.stdout.close()
     if ref_names.poll():
         sys.exit(ref_names.poll())
     del ref_names
-    if not origin_ref_line:
+    if not upstream_ref_line:
         raise Exception('could not find any ref names at all on %s\n'
             '(perhaps you have no remote called that?)' % remote)
     extract_branch_name = r'.*refs/remotes/%s/(.*?)(?:\)$|, ).*' % remote
-    pull_target = re.sub(extract_branch_name, r'\1', origin_ref_line)
+    pull_target = re.sub(extract_branch_name, r'\1', upstream_ref_line)
 
     correct = confirm_assumptions(settings,
         'Do you want to submit a pull request to %s/%s?' %
@@ -186,10 +186,10 @@ def github_path_from_remote_name(remote):
 #origin git@github.com:emmadev/audience.git (fetch)
     return re.sub(r'.*github.com[:/](.*)\.git \(fetch\).*', r'\1', fork_url)
 
-def make_pull_request(settings, origin_github_path,
+def make_pull_request(settings, upstream_github_path,
                     personal_github_path, pull_target, head_branch):
     title, body = get_description_from_editor(settings, pull_target)
-    url = 'https://api.github.com/repos/%s/pulls' % origin_github_path
+    url = 'https://api.github.com/repos/%s/pulls' % upstream_github_path
     print 'pulling to %s' % url
     username = personal_github_path.split('/')[0]
     data = json.dumps({
@@ -227,7 +227,7 @@ def get_description_from_editor(settings, pull_target, filename=None):
 #
 """)
         status = subprocess.Popen(['git', 'log', '--oneline', '--reverse', '%s/%s..'
-                        % (settings['origin'], pull_target)],
+                        % (settings['upstream'], pull_target)],
                         stdout=subprocess.PIPE)
         for line in status.stdout:
             pull_message_file.write("#" + line)

@@ -29,8 +29,8 @@ What it does
 .pullmeconfig
 -------------
 ~/.pullmeconfig and WORKDIR/.pullmeconfig are yaml files that tell pullme about your config. If ~/.pullmeconfig does not exist, pullme will help you create it--at a minimum, a password is necessary.
-The other values you can put in .pullmeconfig are *origin*, *personal_remote*, and *assume*. Note that these values are slated to change very soon, at which point you'll need to update your .pullmeconfig.
-You can use the *origin* and *personal_remote* settings if you don't have your remotes structured the way pullme assumes. For example, if you use 'upstream' to refer to the canonical version and 'origin' for your own fork, you'd do this::
-    'upstream': 'https://github.com/andrewlorente/Pullme.git'
-    'origin': 'git@github.com:YourUsername/Pullme.git'
+The other values you can put in .pullmeconfig are *upstream*, *personal*, and *assume*. Note that these values are slated to change very soon, at which point you'll need to update your .pullmeconfig.
+You can use the *upstream* and *personal* settings if you don't have your remotes structured the way pullme assumes. For example, if you use 'upstream' to refer to the canonical version and 'origin' for your own fork, you'd do this::
+    'upstream': 'upstream'
+    'personal': 'origin'
 The *assume* setting means pullme will trust its own heuristics, rather than prompting to confirm them. It will also trust *you*, and won't check to see if there are any outstanding changes.
