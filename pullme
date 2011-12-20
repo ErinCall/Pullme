@@ -165,7 +165,7 @@ def determine_fork_path(settings):
                remotes_info))[0]
 #now we have a thing that looks like
 #origin git@github.com:emmadev/audience.git (fetch)
-    fork_path = re.sub(r'.*github.com:(.*)\.git \(fetch\).*', r'\1', fork_url)
+    fork_path = re.sub(r'.*github.com[:/](.*)\.git \(fetch\).*', r'\1', fork_url)
     return fork_path
 
 def make_pull_request(settings, fork_path, pull_target, head_branch):
