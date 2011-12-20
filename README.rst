@@ -8,13 +8,24 @@ Installation
 ------------
 Installation is simple::
 
-    curl https://raw.github.com/AndrewLorente/Pullme/master/pullme > ~/bin/pullme && chmod u+x ~/bin/pullme
+::
+    curl https://raw.github.com/AndrewLorente/Pullme/master/scripts/pullme > ~/bin/pullme && chmod u+x ~/bin/pullme
+
+If you'd like to develop pullme (possibly USING pullme!?) do the following:
+
+::
+    fork on github
+    clone your fork
+    python setup.py develop
 
 Remotes
 -------
 First off we need to talk about remotes for a moment. Here's how pullme assumes your remotes are set up:
-origin -> github.com/CANONICAL_FORK.git
-$USER -> github.com/YOUR_FORK.git
+
+::
+    origin -> github.com/CANONICAL_FORK.git
+    $USER -> github.com/YOUR_FORK.git
+
 If you're using a different setup, that's fine, we can work with that. You'll need to specify how your remotes are set up in ~/.pullmeconfig or WORKDIR/.pullmeconfig or command-line flags.
 
 What it does
@@ -30,7 +41,9 @@ What it does
 -------------
 ~/.pullmeconfig and WORKDIR/.pullmeconfig are yaml files that tell pullme about your config. If ~/.pullmeconfig does not exist, pullme will help you create it--at a minimum, a password is necessary.
 The other values you can put in .pullmeconfig are *upstream*, *personal*, and *assume*.
-You can use the *upstream* and *personal* settings if you don't have your remotes structured the way pullme assumes. For example, if you use 'upstream' to refer to the canonical version and 'origin' for your own fork, you'd do this::
+You can use the *upstream* and *personal* settings if you don't have your remotes structured the way pullme assumes. For example, if you use 'upstream' to refer to the canonical version and 'origin' for your own fork, you'd do this
+::
     'upstream': 'upstream'
     'personal': 'origin'
+
 The *assume* setting means pullme will trust its own heuristics, rather than prompting to confirm them. It will also trust *you*, and won't check to see if there are any outstanding changes.
