@@ -168,6 +168,18 @@ def determine_fork_path(settings):
     return fork_path
 
 def make_pull_request(settings, fork_path, pull_target, head_branch):
+    title, body = get_description_from_editor(settings, pull_target)
+    url = 'https://github.com/api/v2/json/pulls/%s' % fork_path
+    data = '&'.join([
+        'pull[base]=%s' % pull_target,
+        'pull[head]=%s' % head_branch,
+        'pull[title]=%s' % title,
+        'pull[body]=%s' % body,
+    ])
+    request = urllib2.Request(url, data=data)
+    urllib2.urlopen(request)
+
+def get_description_from_editor(settings, pull_target):
     descriptor, filename = tempfile.mkstemp()
     pull_message_file = open(filename, 'w')
     pull_message_file.write("""
@@ -203,15 +215,7 @@ def make_pull_request(settings, fork_path, pull_target, head_branch):
     pull_message_file.close()
     os.unlink(filename)
 
-    url = 'https://github.com/api/v2/json/pulls/%s' % fork_path
-    data = '&'.join([
-        'pull[base]=%s' % pull_target,
-        'pull[head]=%s' % head_branch,
-        'pull[title]=%s' % title,
-        'pull[body]=%s' % body,
-    ])
-    request = urllib2.Request(url, data=data)
-    urllib2.urlopen(request)
+    return title, body
 
 try:
     main()
