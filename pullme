@@ -19,7 +19,7 @@ def main():
     push_to_personal(settings, head_branch)
     pull_target = determine_pull_target(settings)
     fork_path = determine_fork_path(settings)
-    make_pull_request(fork_path, pull_target, head_branch)
+    make_pull_request(settings, fork_path, pull_target, head_branch)
 
 def load_settings():
     settings = read_config_file('%s/.pullmeconfig' % os.environ['HOME'])
@@ -167,7 +167,7 @@ def determine_fork_path(settings):
     fork_path = re.sub(r'.*github.com:(.*)\.git \(fetch\).*', r'\1', fork_url)
     return fork_path
 
-def make_pull_request(fork_path, pull_target, head_branch):
+def make_pull_request(settings, fork_path, pull_target, head_branch):
     descriptor, filename = tempfile.mkstemp()
     pull_message_file = open(filename, 'w')
     pull_message_file.write("""
@@ -177,7 +177,14 @@ def make_pull_request(fork_path, pull_target, head_branch):
 #As with a git commit message, the first line is the title, then there is a
 #blank line, and any subsequent lines are description.
 #lines starting with a hash are comments.
+#commits in this pull:
+#
 """)
+    status = subprocess.Popen(['git', 'log', '--oneline', '--reverse', '%s/%s..'
+                    % (settings['origin'], pull_target)],
+                    stdout=subprocess.PIPE)
+    for line in status.stdout:
+        pull_message_file.write("#" + line)
     pull_message_file.flush()
     pull_message_file.close()
 
