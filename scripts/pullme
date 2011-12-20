@@ -165,10 +165,11 @@ def determine_pull_target(settings):
         sys.exit(ref_names.poll())
     del ref_names
     if not upstream_ref_line:
-        raise Exception('could not find any ref names at all on %s\n'
-            '(perhaps you have no remote called that?)' % remote)
-    extract_branch_name = r'.*refs/remotes/%s/(.*?)(?:\)$|, ).*' % remote
-    pull_target = re.sub(extract_branch_name, r'\1', upstream_ref_line)
+        print "Could not automatically determine pull target branch. What branch should we use?"
+        pull_target = raw_input("Branch: ")
+    else:
+        extract_branch_name = r'.*refs/remotes/%s/(.*?)(?:\)$|, ).*' % remote
+        pull_target = re.sub(extract_branch_name, r'\1', upstream_ref_line)
 
     correct = confirm_assumptions(settings,
         'Do you want to submit a pull request to %s/%s?' %
