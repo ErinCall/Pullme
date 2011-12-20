@@ -14,7 +14,7 @@ def main():
     outstanding_changes = subprocess.check_output(
                             ['git', 'status', '--porcelain'])
     if outstanding_changes:
-        confirm_continue(settings)
+        confirm_continue(settings, 'There are outstanding changes.')
     head_branch = determine_head_branch()
     push_to_personal(settings, head_branch)
     pull_target = determine_pull_target(settings)
@@ -73,14 +73,14 @@ def read_config_file(path):
         settings = {} # an empty config will load() to None
     return settings
 
-def confirm_continue(settings):
+def confirm_continue(settings, confirmation_message):
     if settings['assume']: return
-    confirm = raw_input('There are outstanding changes. Continue? [Yn] ')
+    confirm = raw_input('%s Continue? [Yn] ' % confirmation_message)
     if confirm.lower() == 'n':
         sys.exit(1)
     elif confirm and confirm.lower() != 'y':
         print "I don't know what you mean by '%s'" % confirm
-        confirm_continue(settings)
+        confirm_continue(settings, confirmation_message)
 
 def determine_head_branch():
     head_branch = subprocess.check_output(['git', 'name-rev',
@@ -179,10 +179,11 @@ def make_pull_request(settings, fork_path, pull_target, head_branch):
     request = urllib2.Request(url, data=data)
     urllib2.urlopen(request)
 
-def get_description_from_editor(settings, pull_target):
-    descriptor, filename = tempfile.mkstemp()
-    pull_message_file = open(filename, 'w')
-    pull_message_file.write("""
+def get_description_from_editor(settings, pull_target, filename=None):
+    if not filename:
+        descriptor, filename = tempfile.mkstemp()
+        pull_message_file = open(filename, 'w')
+        pull_message_file.write("""
 
 
 #put your pull request message here.
@@ -192,13 +193,13 @@ def get_description_from_editor(settings, pull_target):
 #commits in this pull:
 #
 """)
-    status = subprocess.Popen(['git', 'log', '--oneline', '--reverse', '%s/%s..'
-                    % (settings['origin'], pull_target)],
-                    stdout=subprocess.PIPE)
-    for line in status.stdout:
-        pull_message_file.write("#" + line)
-    pull_message_file.flush()
-    pull_message_file.close()
+        status = subprocess.Popen(['git', 'log', '--oneline', '--reverse', '%s/%s..'
+                        % (settings['origin'], pull_target)],
+                        stdout=subprocess.PIPE)
+        for line in status.stdout:
+            pull_message_file.write("#" + line)
+        pull_message_file.flush()
+        pull_message_file.close()
 
     editor = os.environ.get('EDITOR', '/bin/ed')
     subprocess.check_call([editor, filename])
@@ -213,8 +214,12 @@ def get_description_from_editor(settings, pull_target):
     body = body.rstrip()
 
     pull_message_file.close()
-    os.unlink(filename)
 
+    if not title:
+        confirm_continue(settings, "I couldn't find a pull request title.")
+        return get_description_from_editor(settings, pull_target, filename=filename)
+
+    os.unlink(filename)
     return title, body
 
 try:
