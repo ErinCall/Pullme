@@ -22,12 +22,12 @@ def main():
         confirm_continue(settings, 'There are outstanding changes.')
     head_branch = determine_head_branch()
     push_to_personal(settings, head_branch)
-    pull_target = determine_pull_target(settings)
+    base_branch = determine_base_branch(settings)
     upstream_github_path = github_path_from_remote_name(settings['upstream'])
     personal_github_path = \
                     github_path_from_remote_name(settings['personal'])
     make_pull_request(settings, upstream_github_path,
-                            personal_github_path, pull_target, head_branch)
+                            personal_github_path, base_branch, head_branch)
 
 def load_settings():
     main_config_path = '%s/.pullmeconfig' % os.environ['HOME']
@@ -134,10 +134,10 @@ def confirm_assumptions(settings, confirm_message, correction_message, **kwargs)
     else:
         return kwargs
 
-def determine_pull_target(settings):
+def determine_base_branch(settings):
 # look for the most recent reachable commit that has a corresponding ref name
 # on upstream, and return it.
-    print 'looking for an appropriate pull request target branch'
+    print 'looking for an appropriate base branch'
 
 # format:%d will show us all ref names for a commit.
 # decorate=full ensures that we get refs/remotes in front of upstream,
@@ -156,8 +156,8 @@ def determine_pull_target(settings):
         sys.exit(ref_names.poll())
     del ref_names
     if not upstream_ref_line:
-        print "Could not automatically determine pull target branch. What branch should we use?"
-        pull_target = raw_input("Branch: ")
+        print "Could not automatically determine base branch. What branch should we use?"
+        base_branch = raw_input("Branch: ")
     else:
 # Now we have a list of ref names that look something like this:
 #
@@ -169,13 +169,13 @@ def determine_pull_target(settings):
 # This forces us into the rather awkward match you see below, rather than
 # something like '([^,)]*)'. So it goes..
         extract_branch_name = r'.*refs/remotes/%s/(.*?)(?:\)$|, ).*' % remote
-        pull_target = re.sub(extract_branch_name, r'\1', upstream_ref_line)
+        base_branch = re.sub(extract_branch_name, r'\1', upstream_ref_line)
 
     correct = confirm_assumptions(settings,
         'Do you want to submit a pull request to %s/%s?' %
-                                            (remote, pull_target),
+                                            (remote, base_branch),
         'To what %s would you like to submit your request? ',
-        branch=pull_target,
+        branch=base_branch,
     )
     return correct['branch']
 
@@ -189,8 +189,8 @@ def github_path_from_remote_name(remote):
     return re.sub(r'.*github.com[:/](.*)\.git \(fetch\).*', r'\1', fork_url)
 
 def make_pull_request(settings, upstream_github_path,
-                    personal_github_path, pull_target, head_branch):
-    title, body = get_description_from_editor(settings, pull_target)
+                    personal_github_path, base_branch, head_branch):
+    title, body = get_description_from_editor(settings, base_branch)
     url = 'https://api.github.com/repos/%s/pulls' % upstream_github_path
     print 'pulling to %s' % url
     username = personal_github_path.split('/')[0]
@@ -198,7 +198,7 @@ def make_pull_request(settings, upstream_github_path,
         'title': title,
         'body': body,
         'head': '%s:%s' % (username, head_branch),
-        'base': pull_target,
+        'base': base_branch,
     })
     request = urllib2.Request(url, data=data)
     auth = base64.b64encode('%s:%s' % (username, settings['password']))
@@ -214,7 +214,7 @@ def make_pull_request(settings, upstream_github_path,
         for sub_error in error['errors']:
             sys.stderr.write(sub_error['message'] + "\n")
 
-def get_description_from_editor(settings, pull_target, filename=None):
+def get_description_from_editor(settings, base_branch, filename=None):
     if not filename:
         descriptor, filename = tempfile.mkstemp()
         pull_message_file = open(filename, 'w')
@@ -229,7 +229,7 @@ def get_description_from_editor(settings, pull_target, filename=None):
 #
 """)
         status = subprocess.Popen(['git', 'log', '--oneline', '--reverse', '%s/%s..'
-                        % (settings['upstream'], pull_target)],
+                        % (settings['upstream'], base_branch)],
                         stdout=subprocess.PIPE)
         for line in status.stdout:
             pull_message_file.write("#" + line)
@@ -252,7 +252,7 @@ def get_description_from_editor(settings, pull_target, filename=None):
 
     if not title:
         confirm_continue(settings, "I couldn't find a pull request title.")
-        return get_description_from_editor(settings, pull_target, filename=filename)
+        return get_description_from_editor(settings, base_branch, filename=filename)
 
     os.unlink(filename)
     return title, body
