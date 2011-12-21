@@ -162,7 +162,7 @@ def determine_base_branch(settings):
 # Git's rules on legal ref names are somewhat laxer than we might hope here.
 # the name-terminating tokens, parens and commas, are both legal within names.
 # This forces us into the rather awkward match you see below, rather than
-# something like '([^,)]*)'. So it goes..
+# something like '([^,)]*)'. So it goes...
         extract_branch_name = \
             r'.*refs/remotes/%s/(?P<base_branch>.*?)(?:\)$|, ).*' % remote
         match = re.search(extract_branch_name, upstream_ref_line)
