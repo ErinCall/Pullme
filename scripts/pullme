@@ -145,15 +145,6 @@ def determine_pull_target(settings):
     command = "git log --decorate=full --pretty=format:%d"
     ref_names = subprocess.Popen([command], shell=True, stdout=subprocess.PIPE)
 
-# Now we have a list of ref names that look something like this:
-#
-# (refs/remotes/origin/devel, refs/remotes/alorente/devel)
-# (refs/remotes/origin/master)
-#
-# Git's rules on legal ref names are somewhat laxer than we might hope here.
-# the name-terminating tokens, parens and commas, are both legal within names.
-# This forces us into the rather awkward match you see below, rather than
-# something like '([^,)]*)'. So it goes..
     remote = settings['upstream']
     upstream_ref_line = ''
     while not upstream_ref_line and ref_names.poll() is None:
@@ -168,6 +159,15 @@ def determine_pull_target(settings):
         print "Could not automatically determine pull target branch. What branch should we use?"
         pull_target = raw_input("Branch: ")
     else:
+# Now we have a list of ref names that look something like this:
+#
+# (refs/remotes/origin/devel, refs/remotes/alorente/devel)
+# (refs/remotes/origin/master)
+#
+# Git's rules on legal ref names are somewhat laxer than we might hope here.
+# the name-terminating tokens, parens and commas, are both legal within names.
+# This forces us into the rather awkward match you see below, rather than
+# something like '([^,)]*)'. So it goes..
         extract_branch_name = r'.*refs/remotes/%s/(.*?)(?:\)$|, ).*' % remote
         pull_target = re.sub(extract_branch_name, r'\1', upstream_ref_line)
 
