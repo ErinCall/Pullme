@@ -26,8 +26,7 @@ def main():
 def check_outstanding_changes(settings):
     if settings['assume']:
         return
-    outstanding_changes = subprocess.check_output(
-                            ['git', 'status', '--porcelain'])
+    outstanding_changes = check_output(['git', 'status', '--porcelain'])
     if outstanding_changes:
         subprocess.check_call(['git', 'status', '-s'])
         confirm_continue(settings, 'There are outstanding changes.')
@@ -77,12 +76,7 @@ These options can also be set using `git config [--global] pullme.SETTING VALUE`
     return settings
 
 def git_config(key):
-    try:
-        value = subprocess.check_output(['git', 'config', 'pullme.%s' % key])
-        return value.strip()
-    except Exception, e:
-        pass # git throws an error on nonexistent key,
-             # but this is no error for us
+    return get_output(['git', 'config', 'pullme.%s' % key]).strip()
 
 def establish_password_file(password_filename):
     descriptor, filename = tempfile.mkstemp()
@@ -110,8 +104,7 @@ def confirm_continue(settings, confirmation_message):
         confirm_continue(settings, confirmation_message)
 
 def determine_head_branch():
-    return subprocess.check_output(['git', 'name-rev',
-                                        '--name-only', 'HEAD']).rstrip()
+    return check_output(['git', 'name-rev', '--name-only', 'HEAD']).rstrip()
 
 def push_to_personal(settings, branch):
     correct = confirm_assumptions(settings,
@@ -184,7 +177,7 @@ def determine_base_branch(settings):
     return correct['branch']
 
 def github_path_from_remote_name(remote):
-    remotes_info = subprocess.check_output(['git', 'remote', '-v']).split('\n')
+    remotes_info = check_output(['git', 'remote', '-v']).split('\n')
     fork_url = filter(lambda x: re.search('fetch', x),
                filter(lambda x: re.search(remote, x),
                remotes_info))[0]
@@ -261,7 +254,24 @@ def get_description_from_editor(settings, base_branch, filename=None):
     os.unlink(filename)
     return title, body
 
+def check_output(*args):
+    return_code, output = read_subprocess(*args)
+    if return_code == 0:
+        return output
+    else:
+        raise subprocess.CalledProcessError(return_code, args)
+
+def get_output(*args):
+    return_code, output = read_subprocess(*args)
+    return output
+
+def read_subprocess(*args):
+    subp = subprocess.Popen(*args, stdout=subprocess.PIPE)
+    return_code = subp.wait()
+    return return_code, subp.stdout.read()
+
 try:
     main()
 except subprocess.CalledProcessError, e:
     sys.exit(e.returncode)
+
