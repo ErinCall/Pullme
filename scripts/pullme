@@ -152,10 +152,8 @@ def determine_base_branch(settings):
     if ref_names.poll():
         sys.exit(ref_names.poll())
     del ref_names
-    if not upstream_ref_line:
-        print "Could not automatically determine base branch. What branch should we use?"
-        base_branch = raw_input("Branch: ")
-    else:
+    base_branch = None
+    if upstream_ref_line:
 # Now we have a list of ref names that look something like this:
 #
 # (refs/remotes/origin/devel, refs/remotes/alorente/devel)
@@ -165,8 +163,16 @@ def determine_base_branch(settings):
 # the name-terminating tokens, parens and commas, are both legal within names.
 # This forces us into the rather awkward match you see below, rather than
 # something like '([^,)]*)'. So it goes..
-        extract_branch_name = r'.*refs/remotes/%s/(.*?)(?:\)$|, ).*' % remote
-        base_branch = re.sub(extract_branch_name, r'\1', upstream_ref_line)
+        extract_branch_name = \
+            r'.*refs/remotes/%s/(?P<base_branch>.*?)(?:\)$|, ).*' % remote
+        match = re.search(extract_branch_name, upstream_ref_line)
+        if match:
+            base_branch = match.groupdict()['base_branch']
+
+    if not base_branch:
+        print 'Could not automatically determine base branch. What branch '\
+                                                            'should we use?'
+        base_branch = raw_input("Branch: ")
 
     correct = confirm_assumptions(settings,
         'Do you want to submit a pull request to %s/%s?' %
@@ -183,7 +189,12 @@ def github_path_from_remote_name(remote):
                remotes_info))[0]
 #now we have a thing that looks like
 #origin git@github.com:emmadev/audience.git (fetch)
-    return re.sub(r'.*github.com[:/](.*)\.git \(fetch\).*', r'\1', fork_url)
+    match = re.search(r'.*github.com[:/](?P<path>.*)\.git \(fetch\).*', fork_url)
+    if not match:
+        sys.stderr.write("Couldn't determine a github path from '%s' (this is "
+                        "probably a bug in the script; sorry)" % fork_url)
+        sys.exit(1)
+    return match.groupdict()['path']
 
 def make_pull_request(settings, upstream_github_path,
                     personal_github_path, base_branch, head_branch):
