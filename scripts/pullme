@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import yaml
 import subprocess
 import sys
 import os
@@ -30,11 +29,15 @@ def main():
                             personal_github_path, base_branch, head_branch)
 
 def load_settings():
-    main_config_path = '%s/.pullmeconfig' % os.environ['HOME']
-    if not os.path.exists(main_config_path):
-        establish_main_config(main_config_path)
-    settings = read_config_file(main_config_path)
-    settings.update(read_config_file('.pullmeconfig'))
+    settings = {}
+    password_file = '%s/.githubpass' % os.environ['HOME']
+    if not os.path.exists(password_file):
+        establish_password_file(password_file)
+    settings['password'] = load_password(password_file)
+    settings['upstream'] = git_config('upstream')
+    settings['personal'] = git_config('personal')
+    settings['assume'] = bool(git_config('assume'))
+
     parser = argparse.ArgumentParser(
         description="""
 Submit a pull request for the currently-checked-out branch. Particularly
@@ -43,10 +46,7 @@ what branch you want your code pulled into. Contrast with Github's system of
 defining a "base branch" and pointing all pull requests at that by default.
 """,
         epilog="""
-These options can also be set by writing yaml into ~/.pullmeconfig or
-WORK_DIR/.pullmeconfig. In the case of a conflict, command-line options get
-highest priority, then the work dir's config, and the config in your homedir
-comes last.
+These options can also be set using `git config [--global] pullme.SETTING VALUE`.
 """
     )
     parser.add_argument('-u', '--upstream', help='The remote-name for the repo '
@@ -72,29 +72,29 @@ comes last.
         settings['assume'] = False
     return settings
 
-def establish_main_config(config_path):
-    print 'Looks like this is your first run. We need to establish ' \
-                                            'some initial settings...'
-
-    descriptor, filename = tempfile.mkstemp()
-    config_file = open(filename, 'w')
-    print "First, enter your GitHub password (we'll infer your github username from your personal branch):"
-    password = getpass.getpass()
-    config_file.write("'password': '%s'" % password)
-    config_file.close()
-    os.rename(filename, config_path)
-
-def read_config_file(path):
-    settings = None
+def git_config(key):
     try:
-        config_file = open(path)
-        settings = yaml.load(config_file.read())
-    except IOError, e:
-        if e.errno != 2: #file not found
-            raise e
-    if not settings:
-        settings = {} # an empty config will load() to None
-    return settings
+        value = subprocess.check_output(['git', 'config', 'pullme.%s' % key])
+        return value.strip()
+    except Exception, e:
+        pass # git throws an error on nonexistent key,
+             # but this is no error for us
+
+def establish_password_file(password_filename):
+    descriptor, filename = tempfile.mkstemp()
+    password_file = open(filename, 'w')
+    print "Looks like this is your first run. Enter your GitHub password "\
+            "(we'll infer your github username from your personal branch):"
+    password = getpass.getpass()
+    password_file.write(password)
+    password_file.close()
+    os.rename(filename, password_filename)
+
+def load_password(password_filename):
+    password_file = open(password_filename, 'r')
+    password = password_file.readline()
+    password_file.close()
+    return password
 
 def confirm_continue(settings, confirmation_message):
     if settings['assume']: return
