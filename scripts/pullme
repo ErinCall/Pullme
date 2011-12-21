@@ -62,6 +62,10 @@ These options can also be set using `git config [--global] pullme.SETTING VALUE`
         'action': 'store_true',
         'help': 'Proceed on assumptions without confirming them.'
     }))
+    setters.append(add_setting(parser, 'file', None, {
+        'help': 'read the pull request title and body from FILE, rather than '
+        'invoking $EDITOR'
+    }))
 
     (options, args) = parser.parse_args()
     for setter in setters:
@@ -226,6 +230,8 @@ def make_pull_request(settings, upstream_github_path,
             sys.stderr.write(sub_error['message'] + "\n")
 
 def get_description_from_editor(settings, base_branch, filename=None):
+    if settings['file']:
+        return get_description_from_file(settings)
     if not filename:
         descriptor, filename = tempfile.mkstemp()
         pull_message_file = open(filename, 'w')
@@ -251,14 +257,7 @@ def get_description_from_editor(settings, base_branch, filename=None):
     subprocess.check_call([editor, filename])
 
     pull_message_file = open(filename, 'r')
-    title = pull_message_file.readline().strip()
-    pull_message_file.readline()
-    body = ''
-    for line in pull_message_file:
-        if re.match('^[^#]', line):
-            body += line.rstrip() + "\n"
-    body = body.rstrip()
-
+    title, body = read_description_from_file(pull_message_file)
     pull_message_file.close()
 
     if not title:
@@ -267,6 +266,28 @@ def get_description_from_editor(settings, base_branch, filename=None):
 
     os.unlink(filename)
     return title, body
+
+def get_description_from_file(settings):
+    description_file = open(settings['file'])
+    title, body = read_description_from_file(description_file)
+    description_file.close()
+
+    if not title:
+        sys.stderr.write("I couldn't find a pull request title in %s\n"
+            % settings['file'])
+        sys.exit(1)
+
+    return title, body
+
+def read_description_from_file(description_file):
+    title = description_file.readline().strip()
+    description_file.readline()
+    body = ''
+    for line in description_file:
+        if re.match('^[^#]', line):
+            body += line.rstrip() + "\n"
+
+    return title, body.rstrip()
 
 def check_output(*args):
     return_code, output = read_subprocess(*args)
