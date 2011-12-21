@@ -37,9 +37,6 @@ def load_settings():
     if not os.path.exists(password_file):
         establish_password_file(password_file)
     settings['password'] = load_password(password_file)
-    settings['upstream'] = git_config('upstream')
-    settings['personal'] = git_config('personal')
-    settings['assume'] = bool(git_config('assume'))
 
     parser = optparse.OptionParser(
         description="""
@@ -52,28 +49,34 @@ defining a "base branch" and pointing all pull requests at that by default.
 These options can also be set using `git config [--global] pullme.SETTING VALUE`.
 """
     )
-    parser.add_option('-u', '--upstream', help='The remote-name for the repo '
-                        "into which you want your code pulled. Defaults to "
-                        "'origin'.")
-    parser.add_option('-p', '--personal', help='the remote-name for '
-                        'your fork on github. Defaults to $USER.')
-    parser.add_option('-a', '--assume', action='store_true', help='Proceed on '
-                        'assumptions without confirming them (LIKE A BOSS).')
-    (options, args) = parser.parse_args()
-    if options.upstream is not None:
-        settings['upstream'] = options.upstream
-    if options.personal is not None:
-        settings['personal'] = options.personal
-    if options.assume is not None:
-        settings['assume'] = options.assume
 
-    if not settings.get('upstream'):
-        settings['upstream'] = 'origin'
-    if not settings.get('personal'):
-        settings['personal'] = os.environ['USER']
-    if not settings.get('assume'):
-        settings['assume'] = False
+    setters = []
+    setters.append(add_setting(parser, 'upstream', 'origin', {
+        'help': "The remote-name for the repo into which you want your code "
+                "pulled. Defaults to 'origin'."
+    }))
+    setters.append(add_setting(parser, 'personal', os.environ['USER'], {
+        'help': 'the remote-name for your fork on github. Defaults to $USER.'
+    }))
+    setters.append(add_setting(parser, 'assume', False, {
+        'action': 'store_true',
+        'help': 'Proceed on assumptions without confirming them.'
+    }))
+
+    (options, args) = parser.parse_args()
+    for setter in setters:
+        setter(settings, options)
     return settings
+
+def add_setting(parser, name, default, parser_kwargs):
+    parser.add_option('-' + name[0], '--' + name, **parser_kwargs)
+    def setter(settings, options):
+        settings[name] = git_config(name)
+        if getattr(options, name) is not None:
+            settings[name] = getattr(options, name)
+        if not settings.get(name):
+            settings[name] = default
+    return setter
 
 def git_config(key):
     return get_output(['git', 'config', 'pullme.%s' % key]).strip()
