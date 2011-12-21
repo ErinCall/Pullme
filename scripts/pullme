@@ -110,14 +110,14 @@ def determine_head_branch():
                                         '--name-only', 'HEAD']).rstrip()
 
 def push_to_personal(settings, branch):
-    remote = settings['personal']
     correct = confirm_assumptions(settings,
-        'Do you want to push to %s/%s?' % (remote, branch),
+        'Do you want to push to %s/%s?' % (settings['personal'], branch),
         'To what %s would you like to push? ',
         remote=settings['personal'],
         branch=branch,
     )
-    subprocess.check_call(['git', 'push', correct['remote'],
+    settings['personal'] = correct['remote']
+    subprocess.check_call(['git', 'push', settings['personal'],
                             'HEAD:%s' % correct['branch']])
 
 def confirm_assumptions(settings, confirm_message, correction_message, **kwargs):
