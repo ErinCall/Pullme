@@ -66,7 +66,9 @@ These options can also be set using `git config [--global] pullme.SETTING VALUE`
         'help': 'read the pull request title and body from FILE, rather than '
         'invoking $EDITOR'
     }))
-
+    setters.append(add_setting(parser, 'open', False, {
+        'help': 'Open the pull request URL using "open". Mac OS X specific.'
+    }))
     (options, args) = parser.parse_args()
     for setter in setters:
         setter(settings, options)
@@ -222,6 +224,8 @@ def make_pull_request(settings, upstream_github_path,
         response = json.loads(urllib2.urlopen(request).read())
         print "Successfully opened pull request #%s" % response['number']
         print response['html_url']
+        if settings['open']:
+            check_output(['open', response['html_url']])
     except urllib2.HTTPError, e:
         error = json.loads(e.read())
         sys.stderr.write("Pull request failed:\n")
