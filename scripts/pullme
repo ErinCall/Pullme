@@ -5,7 +5,7 @@ import sys
 import os
 import re
 import urllib2
-import argparse
+import optparse
 import tempfile
 import json
 import getpass
@@ -41,7 +41,7 @@ def load_settings():
     settings['personal'] = git_config('personal')
     settings['assume'] = bool(git_config('assume'))
 
-    parser = argparse.ArgumentParser(
+    parser = optparse.OptionParser(
         description="""
 Submit a pull request for the currently-checked-out branch. Particularly
 targeted at working with long-running feature branches, pullme tries to guess
@@ -52,20 +52,20 @@ defining a "base branch" and pointing all pull requests at that by default.
 These options can also be set using `git config [--global] pullme.SETTING VALUE`.
 """
     )
-    parser.add_argument('-u', '--upstream', help='The remote-name for the repo '
+    parser.add_option('-u', '--upstream', help='The remote-name for the repo '
                         "into which you want your code pulled. Defaults to "
                         "'origin'.")
-    parser.add_argument('-p', '--personal', help='the remote-name for '
+    parser.add_option('-p', '--personal', help='the remote-name for '
                         'your fork on github. Defaults to $USER.')
-    parser.add_argument('-a', '--assume', action='store_true', help='Proceed on '
+    parser.add_option('-a', '--assume', action='store_true', help='Proceed on '
                         'assumptions without confirming them (LIKE A BOSS).')
-    args = parser.parse_args()
-    if args.upstream is not None:
-        settings['upstream'] = args.upstream
-    if args.personal is not None:
-        settings['personal'] = args.personal
-    if args.assume is not None:
-        settings['assume'] = args.assume
+    (options, args) = parser.parse_args()
+    if options.upstream is not None:
+        settings['upstream'] = options.upstream
+    if options.personal is not None:
+        settings['personal'] = options.personal
+    if options.assume is not None:
+        settings['assume'] = options.assume
 
     if not settings.get('upstream'):
         settings['upstream'] = 'origin'
