@@ -105,9 +105,11 @@ def load_password(password_filename):
 
 def confirm_continue(settings, confirmation_message):
     if settings['assume']: return
-    confirm = raw_input('%s Continue? [Yn] ' % confirmation_message)
+    confirm = raw_input('%s Continue? [Yna] ' % confirmation_message)
     if confirm.lower() == 'n':
         sys.exit(1)
+    elif confirm.lower() == 'a':
+        settings['assume'] = True
     elif confirm and confirm.lower() != 'y':
         print "I don't know what you mean by '%s'" % confirm
         confirm_continue(settings, confirmation_message)
@@ -128,12 +130,15 @@ def push_to_personal(settings, branch):
 
 def confirm_assumptions(settings, confirm_message, correction_message, **kwargs):
     if settings['assume']: return kwargs
-    confirm = raw_input('%s [Yn] ' % confirm_message)
+    confirm = raw_input('%s [Yna] ' % confirm_message)
     corrections = {}
     if confirm.lower() == 'n':
         for correction in kwargs:
             corrections[correction] = raw_input(correction_message % correction)
         return corrections
+    elif confirm.lower() == 'a':
+        settings['assume'] = True
+        return kwargs
     elif confirm and confirm.lower() != 'y':
         print "I don't know what you mean by '%s'" % confirm
         return confirm_assumptions(settings, confirm_message, correction_message, **kwargs)
