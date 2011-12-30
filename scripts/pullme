@@ -136,7 +136,7 @@ def confirm_assumptions(settings, confirm_message, correction_message, **kwargs)
         return corrections
     elif confirm and confirm.lower() != 'y':
         print "I don't know what you mean by '%s'" % confirm
-        confirm_assumptions(settings, confirm_message, define_message, **kwargs)
+        return confirm_assumptions(settings, confirm_message, correction_message, **kwargs)
     else:
         return kwargs
 
