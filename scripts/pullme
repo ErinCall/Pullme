@@ -136,7 +136,7 @@ def push_to_personal(settings, branch):
 
 def confirm_assumptions(settings, confirm_message, correction_message, **kwargs):
     if settings['assume']: return kwargs
-    confirm = raw_input('%s [Yna?] ' % confirm_message)
+    confirm = raw_input('%s [Ynaq?] ' % confirm_message)
     corrections = {}
     if confirm.lower() == 'n':
         for correction in kwargs:
@@ -145,10 +145,13 @@ def confirm_assumptions(settings, confirm_message, correction_message, **kwargs)
     elif confirm.lower() == 'a':
         settings['assume'] = True
         return kwargs
+    elif confirm.lower() == 'q':
+        sys.exit(0)
     elif confirm == '?':
         print """y:  yes, this is correct (default)
 n:  no, prompt for a corrected value
 a:  turn on assume-mode for this and all future prompts
+q:  exit immediately
 ?:  print this message and ask again"""
         return confirm_assumptions(settings, confirm_message, correction_message, **kwargs)
     elif confirm and confirm.lower() != 'y':
