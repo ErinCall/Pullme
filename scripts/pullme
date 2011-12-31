@@ -54,14 +54,14 @@ These options can also be set using `git config [--global] pullme.SETTING VALUE`
         'help': "The remote-name for the repo into which you want your code pulled. Defaults to 'origin'."
     }))
     setters.append(add_setting(parser, 'personal', os.environ['USER'], {
-        'help': 'the remote-name for your fork on github. Defaults to $USER.'
+        'help': 'The remote-name for your fork on github. Defaults to $USER.'
     }))
     setters.append(add_setting(parser, 'assume', False, {
         'action': 'store_true',
         'help': 'Proceed on assumptions without confirming them.'
     }))
     setters.append(add_setting(parser, 'file', None, {
-        'help': 'read the pull request title and body from FILE, rather than invoking $EDITOR'
+        'help': 'Read the pull request title and body from FILE, rather than invoking $EDITOR'
     }))
     setters.append(add_setting(parser, 'issue', None, {
         'help': 'Have github generate a title and body using an issue number',
