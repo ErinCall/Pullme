@@ -249,8 +249,7 @@ def make_pull_request(settings, upstream_github_path,
 def get_description(settings, base_branch):
     if not settings['file']:
         settings['file'] = generate_temp_file(settings, base_branch)
-        editor = os.environ.get('EDITOR', '/bin/ed')
-        subprocess.check_call([editor, settings['file']])
+        edit_file(settings['file'])
 
     pull_message_file = open(settings['file'], 'r')
     title, body = read_description_from_file(pull_message_file)
@@ -258,6 +257,7 @@ def get_description(settings, base_branch):
 
     if not title:
         confirm_continue(settings, "I couldn't find a pull request title.")
+        edit_file(settings['file'])
         return get_description(settings, base_branch)
 
     return title, body
@@ -291,6 +291,10 @@ def generate_temp_file(settings, base_branch):
     pull_message_file.close()
 
     return filename
+
+def edit_file(filename):
+    editor = os.environ.get('EDITOR', '/bin/ed')
+    subprocess.check_call([editor, filename])
 
 def read_description_from_file(description_file):
     title = description_file.readline().strip()
