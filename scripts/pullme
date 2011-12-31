@@ -254,7 +254,23 @@ def make_pull_request(settings, upstream_github_path,
         sys.stderr.write("Pull request failed:\n")
         sys.stderr.write(error['message'] + "\n")
         for sub_error in error.get('errors', []):
-            sys.stderr.write(sub_error['message'] + "\n")
+#The github API has handed back errors structured in at least two ways so far.
+#Will it come up with a third way? Hope not...
+            if 'message' in sub_error:
+                sys.stderr.write(sub_error['message'] + "\n")
+            elif 'value' in sub_error:
+                sys.stderr.write("%s %s: '%s'" % (
+                    sub_error['code'],
+                    sub_error['field'],
+                    str(sub_error['value']),
+                ))
+            else:
+                sys.stderr.write("""The github api has returned an error that I don't know how to handle. Be a dear
+and open an issue? https://github.com/AndrewLorente/PullMe/issues/new
+Please include this JSON:
+%s
+""" % json.dumps(error))
+                sys.exit(1)
 
 def get_description(settings, base_branch):
     if not settings['file']:
