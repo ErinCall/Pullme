@@ -67,6 +67,7 @@ These options can also be set using `git config [--global] pullme.SETTING VALUE`
         'help': 'Have github generate a title and body using an issue number',
     }))
     setters.append(add_setting(parser, 'open', False, {
+        'action': 'store_true',
         'help': 'Open the pull request URL using "open". Mac OS X specific.'
     }))
     (options, args) = parser.parse_args()
