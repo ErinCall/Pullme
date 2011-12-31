@@ -6,5 +6,5 @@ setup(name="pullme",
       version="1.0.1",
       description="A smart pull script for GitHub",
       author="Andrew Lorente",
-      author_email="andrew.lorente@myemma.com",
+      author_email="andrew.lorente@gmail.com",
       scripts=["scripts/pullme"])
