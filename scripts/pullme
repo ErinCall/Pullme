@@ -45,6 +45,7 @@ defining a "base branch" and pointing all pull requests at that by default.
 """,
         epilog="""
 These options can also be set using `git config [--global] pullme.SETTING VALUE`.
+(Though this may sometimes be improper)
 """
     )
 
@@ -53,14 +54,17 @@ These options can also be set using `git config [--global] pullme.SETTING VALUE`
         'help': "The remote-name for the repo into which you want your code pulled. Defaults to 'origin'."
     }))
     setters.append(add_setting(parser, 'personal', os.environ['USER'], {
-        'help': 'the remote-name for your fork on github. Defaults to $USER.'
+        'help': 'The remote-name for your fork on github. Defaults to $USER.'
     }))
     setters.append(add_setting(parser, 'assume', False, {
         'action': 'store_true',
         'help': 'Proceed on assumptions without confirming them.'
     }))
     setters.append(add_setting(parser, 'file', None, {
-        'help': 'read the pull request title and body from FILE, rather than invoking $EDITOR'
+        'help': 'Read the pull request title and body from FILE, rather than invoking $EDITOR'
+    }))
+    setters.append(add_setting(parser, 'issue', None, {
+        'help': 'Have github generate a title and body using an issue number',
     }))
     setters.append(add_setting(parser, 'open', False, {
         'help': 'Open the pull request URL using "open". Mac OS X specific.'
@@ -222,17 +226,21 @@ def github_path_from_remote_name(remote):
 def make_pull_request(settings, upstream_github_path,
                     personal_github_path, base_branch, head_branch):
 
-    title, body = get_description(settings, base_branch)
+    description = {}
+    if settings['issue']:
+        description = {'issue': settings['issue']}
+    else:
+        title, body = get_description(settings, base_branch)
+        description = {'title': title, 'body': body}
     url = 'https://api.github.com/repos/%s/pulls' % upstream_github_path
     print 'pulling to %s' % url
     username = personal_github_path.split('/')[0]
-    data = json.dumps({
-        'title': title,
-        'body': body,
+    data = {
         'head': '%s:%s' % (username, head_branch),
         'base': base_branch,
-    })
-    request = urllib2.Request(url, data=data)
+    }
+    data.update(description)
+    request = urllib2.Request(url, data=json.dumps(data))
     auth = base64.b64encode('%s:%s' % (username, settings['password']))
     request.add_header('Authorization', 'Basic %s' % auth)
     try:
@@ -246,7 +254,23 @@ def make_pull_request(settings, upstream_github_path,
         sys.stderr.write("Pull request failed:\n")
         sys.stderr.write(error['message'] + "\n")
         for sub_error in error.get('errors', []):
-            sys.stderr.write(sub_error['message'] + "\n")
+#The github API has handed back errors structured in at least two ways so far.
+#Will it come up with a third way? Hope not...
+            if 'message' in sub_error:
+                sys.stderr.write(sub_error['message'] + "\n")
+            elif 'value' in sub_error:
+                sys.stderr.write("%s %s: '%s'" % (
+                    sub_error['code'],
+                    sub_error['field'],
+                    str(sub_error['value']),
+                ))
+            else:
+                sys.stderr.write("""The github api has returned an error that I don't know how to handle. Be a dear
+and open an issue? https://github.com/AndrewLorente/PullMe/issues/new
+Please include this JSON:
+%s
+""" % json.dumps(error))
+                sys.exit(1)
 
 def get_description(settings, base_branch):
     if not settings['file']:
