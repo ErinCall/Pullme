@@ -243,7 +243,7 @@ def make_pull_request(settings, upstream_github_path,
         error = json.loads(e.read())
         sys.stderr.write("Pull request failed:\n")
         sys.stderr.write(error['message'] + "\n")
-        for sub_error in error['errors']:
+        for sub_error in error.get('errors', []):
             sys.stderr.write(sub_error['message'] + "\n")
 
 def get_description_from_editor(settings, base_branch, filename=None):
