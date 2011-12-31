@@ -45,6 +45,7 @@ defining a "base branch" and pointing all pull requests at that by default.
 """,
         epilog="""
 These options can also be set using `git config [--global] pullme.SETTING VALUE`.
+(Though this may sometimes be improper)
 """
     )
 
@@ -61,6 +62,9 @@ These options can also be set using `git config [--global] pullme.SETTING VALUE`
     }))
     setters.append(add_setting(parser, 'file', None, {
         'help': 'read the pull request title and body from FILE, rather than invoking $EDITOR'
+    }))
+    setters.append(add_setting(parser, 'issue', None, {
+        'help': 'Have github generate a title and body using an issue number',
     }))
     setters.append(add_setting(parser, 'open', False, {
         'help': 'Open the pull request URL using "open". Mac OS X specific.'
@@ -222,17 +226,21 @@ def github_path_from_remote_name(remote):
 def make_pull_request(settings, upstream_github_path,
                     personal_github_path, base_branch, head_branch):
 
-    title, body = get_description(settings, base_branch)
+    description = {}
+    if settings['issue']:
+        description = {'issue': settings['issue']}
+    else:
+        title, body = get_description(settings, base_branch)
+        description = {'title': title, 'body': body}
     url = 'https://api.github.com/repos/%s/pulls' % upstream_github_path
     print 'pulling to %s' % url
     username = personal_github_path.split('/')[0]
-    data = json.dumps({
-        'title': title,
-        'body': body,
+    data = {
         'head': '%s:%s' % (username, head_branch),
         'base': base_branch,
-    })
-    request = urllib2.Request(url, data=data)
+    }
+    data.update(description)
+    request = urllib2.Request(url, data=json.dumps(data))
     auth = base64.b64encode('%s:%s' % (username, settings['password']))
     request.add_header('Authorization', 'Basic %s' % auth)
     try:
