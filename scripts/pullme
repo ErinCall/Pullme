@@ -187,12 +187,14 @@ def determine_base_branch(settings):
 # the name-terminating tokens, parens and commas, are both legal within names.
 # This forces us into the rather awkward match you see below, rather than
 # something like '([^,)]*)'. So it goes...
-        extract_branch_name = r'.*refs/remotes/%s/(?P<base_branch>.*?)(?:\)$|, ).*' % remote
+        extract_branch_name = r'.*refs/remotes/%s/(?!HEAD)(?P<base_branch>.*?)(?:\)$|, ).*' % remote
         match = re.search(extract_branch_name, upstream_ref_line)
         if match:
             base_branch = match.groupdict()['base_branch']
+        multibranch = r'(?:refs/remotes/%s/(?!HEAD).*){2,}' % remote
+        multiple_matches = re.search(multibranch, upstream_ref_line)
 
-    if not base_branch:
+    if multiple_matches or not base_branch:
         print 'Could not automatically determine base branch. What branch should we use?'
         base_branch = raw_input("Branch: ")
 
