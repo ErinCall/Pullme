@@ -302,16 +302,6 @@ def get_description(settings, base_branch):
 def generate_temp_file(settings, base_branch):
     descriptor, filename = tempfile.mkstemp()
     pull_message_file = open(filename, 'w')
-    pull_message_file.write("""
-
-
-#put your pull request message here.
-#As with a git commit message, the first line is the title, then there is a
-#blank line, and any subsequent lines are description.
-#lines starting with a hash are comments.
-#commits in this pull:
-#
-""")
     status = subprocess.Popen(
         [
             'git',
@@ -322,7 +312,25 @@ def generate_temp_file(settings, base_branch):
         ],
         stdout=subprocess.PIPE
     )
-    for line in status.stdout:
+    commits = [ line for line in status.stdout ]
+    if len(commits) == 1:
+        log_message = subprocess.Popen(
+#If there is a single commit, dump its commit message directly into the description file
+            ['git', 'log', '-1', '--pretty=format:%B'],
+            stdout=pull_message_file
+        )
+        log_message.wait()
+    pull_message_file.write("""
+
+
+#put your pull request message here.
+#As with a git commit message, the first line is the title, then there is a
+#blank line, and any subsequent lines are description.
+#lines starting with a hash are comments.
+#commits in this pull:
+#
+""")
+    for line in commits:
         pull_message_file.write("#" + line)
     pull_message_file.flush()
     pull_message_file.close()
