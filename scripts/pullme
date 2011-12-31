@@ -256,7 +256,9 @@ def get_description(settings, base_branch):
     pull_message_file.close()
 
     if not title:
-        confirm_continue(settings, "I couldn't find a pull request title.")
+        confirmation_settings = settings.copy()
+        confirmation_settings['assume'] = False
+        confirm_continue(confirmation_settings, "I couldn't find a pull request title.")
         edit_file(settings['file'])
         return get_description(settings, base_branch)
 
