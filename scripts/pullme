@@ -214,9 +214,13 @@ def github_path_from_remote_name(remote):
     fork_url = filter(lambda x: re.search('fetch', x),
                filter(lambda x: re.search(remote, x),
                remotes_info))[0]
-#now we have a thing that looks like
-#origin git@github.com:emmadev/audience.git (fetch)
-    match = re.search(r'.*github.com[:/](?P<path>.*)\.git \(fetch\).*', fork_url)
+#now we have a thing that looks like one of these:
+#origin  git@github.com:andrewlorente/audience.git (fetch)
+#origin  git@github.com:andrewlorente/audience (fetch)
+#origin  https://github.com/andrewlorente/audience.git (fetch)
+#origin  https://github.com/andrewlorente/audience/ (fetch)
+#origin  https://github.com/andrewlorente/audience (fetch)
+    match = re.search(r'.*github.com[:/](?P<path>.*?)(?:\.git|/)? \(fetch\).*', fork_url)
     if not match:
         sys.stderr.write("Couldn't determine a github path from '%s' (this is "
                         "probably a bug in the script; sorry)" % fork_url)
