@@ -220,7 +220,7 @@ def github_path_from_remote_name(remote):
 def make_pull_request(settings, upstream_github_path,
                     personal_github_path, base_branch, head_branch):
 
-    title, body = get_description_from_editor(settings, base_branch)
+    title, body = get_description(settings, base_branch)
     url = 'https://api.github.com/repos/%s/pulls' % upstream_github_path
     print 'pulling to %s' % url
     username = personal_github_path.split('/')[0]
@@ -246,7 +246,7 @@ def make_pull_request(settings, upstream_github_path,
         for sub_error in error['errors']:
             sys.stderr.write(sub_error['message'] + "\n")
 
-def get_description_from_editor(settings, base_branch, filename=None):
+def get_description(settings, base_branch, filename=None):
     if settings['file']:
         return get_description_from_file(settings)
     if not filename:
@@ -286,7 +286,7 @@ def get_description_from_editor(settings, base_branch, filename=None):
 
     if not title:
         confirm_continue(settings, "I couldn't find a pull request title.")
-        return get_description_from_editor(settings, base_branch, filename=filename)
+        return get_description(settings, base_branch, filename=filename)
 
     os.unlink(filename)
     return title, body
