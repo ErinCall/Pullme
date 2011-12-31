@@ -277,25 +277,29 @@ Please include this JSON:
 """ % json.dumps(error))
                 sys.exit(1)
 
-def get_description(settings, base_branch):
-    if not settings['file']:
-        settings['file'] = generate_temp_file(settings, base_branch)
-        edit_file(settings['file'])
+def get_description(settings, base_branch, filename=None):
+    filename = settings['file']
+    if not filename:
+        filename = generate_temp_file(settings, base_branch)
+        edit_file(filename)
 
-    pull_message_file = open(settings['file'], 'r')
+    pull_message_file = open(filename, 'r')
     title, body = read_description_from_file(pull_message_file)
     pull_message_file.close()
 
     if not title:
         confirmation_settings = settings.copy()
         confirmation_settings['assume'] = False
-        def exit():
-            os.rename(settings['file'], 'pullme_description')
+        exit = lambda: sys.exit(1)
+        def save_description():
+            os.rename(filename, 'pullme_description')
             print 'the description has been stored in ./pullme_description'
             sys.exit(1)
+        if not settings['file']:
+            exit = save_description
         confirm_continue(confirmation_settings, "I couldn't find a pull request title.", exit=exit)
-        edit_file(settings['file'])
-        return get_description(settings, base_branch)
+        edit_file(filename)
+        return get_description(settings, base_branch, filename=filename)
 
     return title, body
 
