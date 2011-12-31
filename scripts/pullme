@@ -99,11 +99,11 @@ def load_password(password_filename):
     password_file.close()
     return password
 
-def confirm_continue(settings, confirmation_message):
+def confirm_continue(settings, confirmation_message, exit=lambda: sys.exit(1)):
     if settings['assume']: return
     confirm = raw_input('%s Continue? [Yna?] ' % confirmation_message)
     if confirm.lower() == 'n':
-        sys.exit(1)
+        exit()
     elif confirm.lower() == 'a':
         settings['assume'] = True
     elif confirm == '?':
@@ -111,10 +111,10 @@ def confirm_continue(settings, confirmation_message):
 n:  no, exit immediately
 a:  turn on assume-mode for this and all future prompts
 ?:  print this message and ask again"""
-        confirm_continue(settings, confirmation_message)
+        confirm_continue(settings, confirmation_message, exit)
     elif confirm and confirm.lower() != 'y':
         print "I don't know what you mean by '%s'" % confirm
-        confirm_continue(settings, confirmation_message)
+        confirm_continue(settings, confirmation_message, exit)
 
 def determine_head_branch():
     return check_output(['git', 'name-rev', '--name-only', 'HEAD']).rstrip()
@@ -220,7 +220,7 @@ def github_path_from_remote_name(remote):
 def make_pull_request(settings, upstream_github_path,
                     personal_github_path, base_branch, head_branch):
 
-    title, body = get_description_from_editor(settings, base_branch)
+    title, body = get_description(settings, base_branch)
     url = 'https://api.github.com/repos/%s/pulls' % upstream_github_path
     print 'pulling to %s' % url
     username = personal_github_path.split('/')[0]
@@ -246,13 +246,32 @@ def make_pull_request(settings, upstream_github_path,
         for sub_error in error.get('errors', []):
             sys.stderr.write(sub_error['message'] + "\n")
 
-def get_description_from_editor(settings, base_branch, filename=None):
-    if settings['file']:
-        return get_description_from_file(settings)
-    if not filename:
-        descriptor, filename = tempfile.mkstemp()
-        pull_message_file = open(filename, 'w')
-        pull_message_file.write("""
+def get_description(settings, base_branch):
+    if not settings['file']:
+        settings['file'] = generate_temp_file(settings, base_branch)
+        edit_file(settings['file'])
+
+    pull_message_file = open(settings['file'], 'r')
+    title, body = read_description_from_file(pull_message_file)
+    pull_message_file.close()
+
+    if not title:
+        confirmation_settings = settings.copy()
+        confirmation_settings['assume'] = False
+        def exit():
+            os.rename(settings['file'], 'pullme_description')
+            print 'the description has been stored in ./pullme_description'
+            sys.exit(1)
+        confirm_continue(confirmation_settings, "I couldn't find a pull request title.", exit=exit)
+        edit_file(settings['file'])
+        return get_description(settings, base_branch)
+
+    return title, body
+
+def generate_temp_file(settings, base_branch):
+    descriptor, filename = tempfile.mkstemp()
+    pull_message_file = open(filename, 'w')
+    pull_message_file.write("""
 
 
 #put your pull request message here.
@@ -262,45 +281,26 @@ def get_description_from_editor(settings, base_branch, filename=None):
 #commits in this pull:
 #
 """)
-        status = subprocess.Popen(
-            [
-                'git',
-                'log',
-                '--oneline',
-                '--reverse',
-                '%s/%s..' % (settings['upstream'], base_branch)
-            ],
-            stdout=subprocess.PIPE
-        )
-        for line in status.stdout:
-            pull_message_file.write("#" + line)
-        pull_message_file.flush()
-        pull_message_file.close()
-
-    editor = os.environ.get('EDITOR', '/bin/ed')
-    subprocess.check_call([editor, filename])
-
-    pull_message_file = open(filename, 'r')
-    title, body = read_description_from_file(pull_message_file)
+    status = subprocess.Popen(
+        [
+            'git',
+            'log',
+            '--oneline',
+            '--reverse',
+            '%s/%s..' % (settings['upstream'], base_branch)
+        ],
+        stdout=subprocess.PIPE
+    )
+    for line in status.stdout:
+        pull_message_file.write("#" + line)
+    pull_message_file.flush()
     pull_message_file.close()
 
-    if not title:
-        confirm_continue(settings, "I couldn't find a pull request title.")
-        return get_description_from_editor(settings, base_branch, filename=filename)
+    return filename
 
-    os.unlink(filename)
-    return title, body
-
-def get_description_from_file(settings):
-    description_file = open(settings['file'])
-    title, body = read_description_from_file(description_file)
-    description_file.close()
-
-    if not title:
-        sys.stderr.write("I couldn't find a pull request title in %s\n" % settings['file'])
-        sys.exit(1)
-
-    return title, body
+def edit_file(filename):
+    editor = os.environ.get('EDITOR', '/bin/ed')
+    subprocess.check_call([editor, filename])
 
 def read_description_from_file(description_file):
     title = description_file.readline().strip()
