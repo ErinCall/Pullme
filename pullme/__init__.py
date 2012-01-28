@@ -8,13 +8,13 @@ import getpass
 import base64
 
 import pullme.subprocess_wrapper as subprocess
+import pullme.git as git
 
 def check_outstanding_changes(settings):
     if settings['assume']:
         return
-    outstanding_changes = subprocess.check_output(['git', 'status', '--porcelain'])
-    if outstanding_changes:
-        subprocess.check_call(['git', 'status', '-s'])
+    if git.has_outstanding_changes():
+        git.show_outstanding_changes()
         confirm_continue(settings, 'There are outstanding changes.')
 
 def load_settings():
@@ -66,15 +66,12 @@ These options can also be set using `git config [--global] pullme.SETTING VALUE`
 def add_setting(parser, name, default, parser_kwargs):
     parser.add_option('-' + name[0], '--' + name, **parser_kwargs)
     def setter(settings, options):
-        settings[name] = git_config(name)
+        settings[name] = git.config(name)
         if getattr(options, name) is not None:
             settings[name] = getattr(options, name)
         if not settings.get(name):
             settings[name] = default
     return setter
-
-def git_config(key):
-    return subprocess.get_output(['git', 'config', 'pullme.%s' % key]).strip()
 
 def establish_password_file(password_filename):
     print """Looks like this is your first run. Enter your GitHub password (we'll infer your
@@ -112,7 +109,7 @@ a:  turn on assume-mode for this and all future prompts
         confirm_continue(settings, confirmation_message)
 
 def determine_head_branch():
-    return subprocess.check_output(['git', 'name-rev', '--name-only', 'HEAD']).rstrip()
+    return git.current_branch()
 
 def push_to_personal(settings, branch):
     correct = confirm_assumptions(settings,
@@ -122,7 +119,7 @@ def push_to_personal(settings, branch):
         branch=branch,
     )
     settings['personal'] = correct['remote']
-    subprocess.check_call(['git', 'push', settings['personal'], 'HEAD:%s' % correct['branch']])
+    git.push_to_personal(settings['personal'], correct['branch'])
 
 def confirm_assumptions(settings, confirm_message, correction_message, **kwargs):
     if settings['assume']: return kwargs
@@ -155,15 +152,7 @@ def determine_base_branch(settings):
 # on upstream, and return it.
     print 'looking for an appropriate base branch'
 
-# format:%d will show us all ref names for a commit.
-# decorate=full ensures that we get refs/remotes in front of upstream,
-# insulating us from local branches that happen to have 'upstream' in the name.
-    command = "git log --decorate=full --pretty=format:%d"
-    ref_names = subprocess.Popen(
-        [command],
-        shell=True,
-        stdout=subprocess.PIPE,
-    )
+    ref_names = git.log_with_ref_names()
 
     remote = settings['upstream']
     upstream_ref_line = ''
@@ -205,7 +194,7 @@ def determine_base_branch(settings):
     return correct['branch']
 
 def github_path_from_remote_name(remote):
-    remotes_info = subprocess.check_output(['git', 'remote', '-v']).split('\n')
+    remotes_info = git.remotes()
     fork_url = filter(lambda x: re.search('fetch', x),
                filter(lambda x: re.search(remote, x),
                remotes_info))[0]
@@ -296,24 +285,12 @@ def get_description(settings, base_branch, filename=None):
 def generate_description_file(settings, base_branch):
     filename = 'pullme_description'
     pull_message_file = open(filename, 'w')
-    status = subprocess.Popen(
-        [
-            'git',
-            'log',
-            '--oneline',
-            '--reverse',
-            '%s/%s..' % (settings['upstream'], base_branch)
-        ],
-        stdout=subprocess.PIPE
-    )
-    commits = [ line for line in status.stdout ]
+    commits = git.commits_since('%s/%s' % (settings['upstream'], base_branch))
     if len(commits) == 1:
-        log_message = subprocess.Popen(
-#If there is a single commit, dump its commit message directly into the description file
-            ['git', 'log', '-1', '--pretty=format:%B'],
-            stdout=pull_message_file
-        )
-        log_message.wait()
+        #If there is a single commit, dump its commit message
+        #into the description file
+        pull_message_file.write(git.latest_commit_message())
+
     pull_message_file.write("""
 
 
