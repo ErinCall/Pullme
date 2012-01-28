@@ -8,7 +8,9 @@ Installation
 ------------
 Installation is simple::
 
-    curl https://raw.github.com/AndrewLorente/Pullme/master/scripts/pullme > ~/bin/pullme && chmod u+x ~/bin/pullme
+    git clone git://github.com/AndrewLorente/Pullme.git pullme
+    cd pullme
+    python setup.py install
 
 If you'd like an easier way to stay up-to-date, or you'd like to develop pullme (possibly USING pullme!?) do the following::
 
