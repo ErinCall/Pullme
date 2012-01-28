@@ -1,4 +1,3 @@
-import subprocess
 import sys
 import os
 import re
@@ -8,10 +7,12 @@ import json
 import getpass
 import base64
 
+import pullme.subprocess_wrapper as subprocess
+
 def check_outstanding_changes(settings):
     if settings['assume']:
         return
-    outstanding_changes = check_output(['git', 'status', '--porcelain'])
+    outstanding_changes = subprocess.check_output(['git', 'status', '--porcelain'])
     if outstanding_changes:
         subprocess.check_call(['git', 'status', '-s'])
         confirm_continue(settings, 'There are outstanding changes.')
@@ -73,7 +74,7 @@ def add_setting(parser, name, default, parser_kwargs):
     return setter
 
 def git_config(key):
-    return get_output(['git', 'config', 'pullme.%s' % key]).strip()
+    return subprocess.get_output(['git', 'config', 'pullme.%s' % key]).strip()
 
 def establish_password_file(password_filename):
     print """Looks like this is your first run. Enter your GitHub password (we'll infer your
@@ -105,13 +106,13 @@ def confirm_continue(settings, confirmation_message):
 n:  no, exit immediately
 a:  turn on assume-mode for this and all future prompts
 ?:  print this message and ask again"""
-        confirm_continue(settings, confirmation_message, exit)
+        confirm_continue(settings, confirmation_message)
     elif confirm and confirm.lower() != 'y':
         print "I don't know what you mean by '%s'" % confirm
-        confirm_continue(settings, confirmation_message, exit)
+        confirm_continue(settings, confirmation_message)
 
 def determine_head_branch():
-    return check_output(['git', 'name-rev', '--name-only', 'HEAD']).rstrip()
+    return subprocess.check_output(['git', 'name-rev', '--name-only', 'HEAD']).rstrip()
 
 def push_to_personal(settings, branch):
     correct = confirm_assumptions(settings,
@@ -158,7 +159,11 @@ def determine_base_branch(settings):
 # decorate=full ensures that we get refs/remotes in front of upstream,
 # insulating us from local branches that happen to have 'upstream' in the name.
     command = "git log --decorate=full --pretty=format:%d"
-    ref_names = subprocess.Popen([command], shell=True, stdout=subprocess.PIPE)
+    ref_names = subprocess.Popen(
+        [command],
+        shell=True,
+        stdout=subprocess.PIPE,
+    )
 
     remote = settings['upstream']
     upstream_ref_line = ''
@@ -200,7 +205,7 @@ def determine_base_branch(settings):
     return correct['branch']
 
 def github_path_from_remote_name(remote):
-    remotes_info = check_output(['git', 'remote', '-v']).split('\n')
+    remotes_info = subprocess.check_output(['git', 'remote', '-v']).split('\n')
     fork_url = filter(lambda x: re.search('fetch', x),
                filter(lambda x: re.search(remote, x),
                remotes_info))[0]
@@ -242,7 +247,7 @@ def make_pull_request(settings, upstream_github_path,
         print "Successfully opened pull request #%s" % response['number']
         print response['html_url']
         if settings['open']:
-            check_output(['open', response['html_url']])
+            subprocess.check_output(['open', response['html_url']])
     except urllib2.HTTPError, e:
         error = json.loads(e.read())
         sys.stderr.write("Pull request failed:\n")
@@ -339,21 +344,4 @@ def read_description_from_file(description_file):
             body += line.rstrip() + "\n"
 
     return title, body.rstrip()
-
-def check_output(*args):
-    return_code, output = read_subprocess(*args)
-    if return_code == 0:
-        return output
-    else:
-        raise subprocess.CalledProcessError(return_code, args)
-
-def get_output(*args):
-    return_code, output = read_subprocess(*args)
-    return output
-
-def read_subprocess(*args):
-    subp = subprocess.Popen(*args, stdout=subprocess.PIPE)
-    return_code = subp.wait()
-    return return_code, subp.stdout.read()
-
 
