@@ -95,7 +95,7 @@ def confirm_continue(settings, confirmation_message):
     if settings['assume']: return
     confirm = raw_input('%s Continue? [Yna?] ' % confirmation_message)
     if confirm.lower() == 'n':
-        sys.exit(1)
+        exit(1)
     elif confirm.lower() == 'a':
         settings['assume'] = True
     elif confirm == '?':
@@ -133,7 +133,7 @@ def confirm_assumptions(settings, confirm_message, correction_message, **kwargs)
         settings['assume'] = True
         return kwargs
     elif confirm.lower() == 'q':
-        sys.exit(0)
+        exit(0)
     elif confirm == '?':
         print """y:  yes, this is correct (default)
 n:  no, prompt for a corrected value
@@ -162,7 +162,7 @@ def determine_base_branch(settings):
             upstream_ref_line = line.strip()
     ref_names.stdout.close()
     if ref_names.poll():
-        sys.exit(ref_names.poll())
+        exit(ref_names.poll())
     del ref_names
     base_branch = None
     if upstream_ref_line:
@@ -208,7 +208,7 @@ def github_path_from_remote_name(remote):
     if not match:
         sys.stderr.write("Couldn't determine a github path from '%s' (this is "
                         "probably a bug in the script; sorry)" % fork_url)
-        sys.exit(1)
+        exit(1)
     return match.groupdict()['path']
 
 def make_pull_request(settings, upstream_github_path,
@@ -258,7 +258,7 @@ and open an issue? https://github.com/AndrewLorente/PullMe/issues/new
 Please include this JSON:
 %s
 """ % json.dumps(error))
-                sys.exit(1)
+                exit(1)
 
 def get_description(settings, base_branch, filename=None):
     filename = filename or settings['file']
@@ -322,3 +322,4 @@ def read_description_from_file(description_file):
 
     return title, body.rstrip()
 
+exit = sys.exit
