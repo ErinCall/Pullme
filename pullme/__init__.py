@@ -4,7 +4,6 @@ import os
 import re
 import urllib2
 import optparse
-import tempfile
 import json
 import getpass
 import base64
@@ -77,14 +76,16 @@ def git_config(key):
     return get_output(['git', 'config', 'pullme.%s' % key]).strip()
 
 def establish_password_file(password_filename):
-    descriptor, filename = tempfile.mkstemp()
-    password_file = open(filename, 'w')
     print """Looks like this is your first run. Enter your GitHub password (we'll infer your
 github username from your personal branch)."""
+
     password = getpass.getpass()
-    password_file.write(password)
-    password_file.close()
-    os.rename(filename, password_filename)
+    openflags = os.O_RDWR | os.O_CREAT | os.O_EXCL
+    fd = os.open(password_filename, openflags, 0600)
+    fh = os.fdopen(fd, 'w')
+
+    fh.write(password)
+    fh.close()
 
 def load_password(password_filename):
     password_file = open(password_filename, 'r')
@@ -92,11 +93,11 @@ def load_password(password_filename):
     password_file.close()
     return password
 
-def confirm_continue(settings, confirmation_message, exit=lambda: sys.exit(1)):
+def confirm_continue(settings, confirmation_message):
     if settings['assume']: return
     confirm = raw_input('%s Continue? [Yna?] ' % confirmation_message)
     if confirm.lower() == 'n':
-        exit()
+        sys.exit(1)
     elif confirm.lower() == 'a':
         settings['assume'] = True
     elif confirm == '?':
@@ -266,9 +267,9 @@ Please include this JSON:
                 sys.exit(1)
 
 def get_description(settings, base_branch, filename=None):
-    filename = settings['file']
+    filename = filename or settings['file']
     if not filename:
-        filename = generate_temp_file(settings, base_branch)
+        filename = generate_description_file(settings, base_branch)
         edit_file(filename)
 
     pull_message_file = open(filename, 'r')
@@ -278,21 +279,17 @@ def get_description(settings, base_branch, filename=None):
     if not title:
         confirmation_settings = settings.copy()
         confirmation_settings['assume'] = False
-        exit = lambda: sys.exit(1)
-        def save_description():
-            os.rename(filename, 'pullme_description')
-            print 'the description has been stored in ./pullme_description'
-            sys.exit(1)
-        if not settings['file']:
-            exit = save_description
-        confirm_continue(confirmation_settings, "I couldn't find a pull request title.", exit=exit)
+        confirm_continue(confirmation_settings, "I couldn't find a pull request title.")
         edit_file(filename)
         return get_description(settings, base_branch, filename=filename)
 
+    if not settings['file']:
+        os.remove(filename)
+
     return title, body
 
-def generate_temp_file(settings, base_branch):
-    descriptor, filename = tempfile.mkstemp()
+def generate_description_file(settings, base_branch):
+    filename = 'pullme_description'
     pull_message_file = open(filename, 'w')
     status = subprocess.Popen(
         [
