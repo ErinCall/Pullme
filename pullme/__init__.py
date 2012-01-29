@@ -9,13 +9,14 @@ import base64
 
 from pullme.subprocess_wrapper import Subprocess as subprocess
 from pullme.git import Git as git
+from pullme.interaction import Interaction as interaction
 
 def check_outstanding_changes(settings):
     if settings['assume']:
         return
     if git.has_outstanding_changes():
         git.show_outstanding_changes()
-        confirm_continue(settings, 'There are outstanding changes.')
+        interaction.confirm_continue(settings, 'There are outstanding changes.')
 
 def load_settings():
     settings = {}
@@ -91,28 +92,11 @@ def load_password(password_filename):
     password_file.close()
     return password
 
-def confirm_continue(settings, confirmation_message):
-    if settings['assume']: return
-    confirm = raw_input('%s Continue? [Yna?] ' % confirmation_message)
-    if confirm.lower() == 'n':
-        exit(1)
-    elif confirm.lower() == 'a':
-        settings['assume'] = True
-    elif confirm == '?':
-        print """y:  yes, continue (default)
-n:  no, exit immediately
-a:  turn on assume-mode for this and all future prompts
-?:  print this message and ask again"""
-        confirm_continue(settings, confirmation_message)
-    elif confirm and confirm.lower() != 'y':
-        print "I don't know what you mean by '%s'" % confirm
-        confirm_continue(settings, confirmation_message)
-
 def determine_head_branch():
     return git.current_branch()
 
 def push_to_personal(settings, branch):
-    correct = confirm_assumptions(settings,
+    correct = interaction.confirm_assumptions(settings,
         'Do you want to push to %s/%s?' % (settings['personal'], branch),
         'To what %s would you like to push? ',
         remote=settings['personal'],
@@ -120,32 +104,6 @@ def push_to_personal(settings, branch):
     )
     settings['personal'] = correct['remote']
     git.push_to_personal(settings['personal'], correct['branch'])
-
-def confirm_assumptions(settings, confirm_message, correction_message, **kwargs):
-    if settings['assume']: return kwargs
-    confirm = raw_input('%s [Ynaq?] ' % confirm_message)
-    corrections = {}
-    if confirm.lower() == 'n':
-        for correction in kwargs:
-            corrections[correction] = raw_input(correction_message % correction)
-        return corrections
-    elif confirm.lower() == 'a':
-        settings['assume'] = True
-        return kwargs
-    elif confirm.lower() == 'q':
-        exit(0)
-    elif confirm == '?':
-        print """y:  yes, this is correct (default)
-n:  no, prompt for a corrected value
-a:  turn on assume-mode for this and all future prompts
-q:  exit immediately
-?:  print this message and ask again"""
-        return confirm_assumptions(settings, confirm_message, correction_message, **kwargs)
-    elif confirm and confirm.lower() != 'y':
-        print "I don't know what you mean by '%s'" % confirm
-        return confirm_assumptions(settings, confirm_message, correction_message, **kwargs)
-    else:
-        return kwargs
 
 def determine_base_branch(settings):
 # look for the most recent reachable commit that has a corresponding ref name
@@ -186,7 +144,7 @@ def determine_base_branch(settings):
         print 'Could not automatically determine base branch. What branch should we use?'
         base_branch = raw_input("Branch: ")
 
-    correct = confirm_assumptions(settings,
+    correct = interaction.confirm_assumptions(settings,
         'Do you want to submit a pull request to %s/%s?' % (remote, base_branch),
         'To what %s would you like to submit your request? ',
         branch=base_branch,
@@ -273,7 +231,10 @@ def get_description(settings, base_branch, filename=None):
     if not title:
         confirmation_settings = settings.copy()
         confirmation_settings['assume'] = False
-        confirm_continue(confirmation_settings, "I couldn't find a pull request title.")
+        interaction.confirm_continue(
+            confirmation_settings,
+            "I couldn't find a pull request title."
+        )
         edit_file(filename)
         return get_description(settings, base_branch, filename=filename)
 
