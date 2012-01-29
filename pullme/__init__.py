@@ -122,26 +122,9 @@ def determine_base_branch(settings):
     if ref_names.poll():
         exit(ref_names.poll())
     del ref_names
-    base_branch = None
-    multiple_matches = False
-    if upstream_ref_line:
-# Now we have a list of ref names that look something like this:
-#
-# (refs/remotes/origin/devel, refs/remotes/alorente/devel)
-# (refs/remotes/origin/master)
-#
-# Git's rules on legal ref names are somewhat laxer than we might hope here.
-# the name-terminating tokens, parens and commas, are both legal within names.
-# This forces us into the rather awkward match you see below, rather than
-# something like '([^,)]*)'. So it goes...
-        extract_branch_name = r'.*refs/remotes/%s/(?!HEAD)(?P<base_branch>.*?)(?:\)$|, ).*' % remote
-        match = re.search(extract_branch_name, upstream_ref_line)
-        if match:
-            base_branch = match.groupdict()['base_branch']
-        multibranch = r'(?:refs/remotes/%s/(?!HEAD).*){2,}' % remote
-        multiple_matches = re.search(multibranch, upstream_ref_line)
+    base_branch = extract_branch_name(upstream_ref_line, remote)
 
-    if multiple_matches or not base_branch:
+    if has_multiple_branches(upstream_ref_line, remote) or not base_branch:
         print 'Could not automatically determine base branch. What branch should we use?'
         base_branch = raw_input("Branch: ")
 
@@ -151,6 +134,19 @@ def determine_base_branch(settings):
         branch=base_branch,
     )
     return correct['branch']
+
+def extract_branch_name(ref_line, remote):
+    if ref_line is None:
+        return None
+    extractor_regex = r'.*refs/remotes/%s/(?!HEAD)(?P<base_branch>.*?)(?:\)$|, ).*' % remote
+    match = re.search(extractor_regex, ref_line)
+    return match.groupdict()['base_branch'] if match else None
+
+def has_multiple_branches(ref_line, remote):
+    if ref_line is None:
+        return None
+    extractor_regex = r'(?:refs/remotes/%s/(?!HEAD).*){2,}' % remote
+    return bool(re.search(extractor_regex, ref_line))
 
 def github_path_from_remote_name(remote):
     remotes_info = git.remotes()
