@@ -10,4 +10,5 @@ setup(
     author_email="andrew.lorente@gmail.com",
     scripts=["scripts/pullme"],
     packages=['pullme'],
+    install_requires=['nose', 'pyDoubles'],
 )
