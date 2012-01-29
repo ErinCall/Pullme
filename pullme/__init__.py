@@ -7,8 +7,8 @@ import json
 import getpass
 import base64
 
-import pullme.subprocess_wrapper as subprocess
-import pullme.git as git
+from pullme.subprocess_wrapper import Subprocess as subprocess
+from pullme.git import Git as git
 
 def check_outstanding_changes(settings):
     if settings['assume']:

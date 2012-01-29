@@ -1,28 +1,37 @@
 import subprocess
 
-check_call = subprocess.check_call
-Popen = subprocess.Popen
-PIPE = subprocess.PIPE
+class Subprocess(object):
+    PIPE = subprocess.PIPE
 
-def _check_output(*args):
-    return_code, output = read_subprocess(*args)
-    if return_code == 0:
+    @classmethod
+    def check_call(cls, *args, **kwargs):
+        return subprocess.check_call(*args, **kwargs)
+
+    @classmethod
+    def Popen(cls, *args, **kwargs):
+        return subprocess.Popen(*args, **kwargs)
+
+    @classmethod
+    def check_output(cls, *args, **kwargs):
+        if hasattr(subprocess, 'check_output'):
+            return subprocess.check_output(*args, **kwargs)
+
+        # subprocess.check_output is not available in python 2.6
+        return_code, output = cls.read_subprocess(*args)
+        if return_code == 0:
+            return output
+        else:
+            raise subprocess.CalledProcessError(return_code, args)
+
+    @classmethod
+    def get_output(cls, *args):
+        return_code, output = cls.read_subprocess(*args)
         return output
-    else:
-        raise subprocess.CalledProcessError(return_code, args)
 
-if hasattr(subprocess, 'check_output'):
-    check_output = subprocess.check_output
-else:
-    check_output = _check_output
-
-def get_output(*args):
-    return_code, output = read_subprocess(*args)
-    return output
-
-def read_subprocess(*args):
-    subp = subprocess.Popen(*args, stdout=subprocess.PIPE)
-    return_code = subp.wait()
-    return return_code, subp.stdout.read()
+    @classmethod
+    def read_subprocess(cls, *args):
+        subp = subprocess.Popen(*args, stdout=subprocess.PIPE)
+        return_code = subp.wait()
+        return return_code, subp.stdout.read()
 
 
