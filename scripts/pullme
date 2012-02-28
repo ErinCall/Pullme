@@ -182,6 +182,7 @@ def determine_base_branch(settings):
         sys.exit(ref_names.poll())
     del ref_names
     base_branch = None
+    multiple_matches = False
     if upstream_ref_line:
 # Now we have a list of ref names that look something like this:
 #
