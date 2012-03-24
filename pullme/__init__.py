@@ -11,6 +11,16 @@ from pullme.subprocess_wrapper import Subprocess as subprocess
 from pullme.git import Git as git
 from pullme.interaction import Interaction as interaction
 
+def main():
+    settings = load_settings()
+    check_outstanding_changes(settings)
+    head_branch = determine_head_branch()
+    push_to_personal(settings, head_branch)
+    base_branch = determine_base_branch(settings)
+    upstream_github_path = github_path_from_remote_name(settings['upstream'])
+    personal_github_path = github_path_from_remote_name(settings['personal'])
+    make_pull_request(settings, upstream_github_path, personal_github_path, base_branch, head_branch)
+
 def check_outstanding_changes(settings):
     if settings['assume']:
         return
@@ -78,7 +88,7 @@ def establish_password_file(password_filename):
     print """Looks like this is your first run. Enter your GitHub password (we'll infer your
 github username from your personal branch)."""
 
-    password = getpass.getpass()
+    password = getpass.getpass('Password: ', sys.stderr)
     openflags = os.O_RDWR | os.O_CREAT | os.O_EXCL
     fd = os.open(password_filename, openflags, 0600)
     fh = os.fdopen(fd, 'w')
