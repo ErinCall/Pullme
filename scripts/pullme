@@ -14,7 +14,8 @@ import base64
 DESCRIPTION_FILE = os.path.join('.', 'pullme_description')
 
 def main():
-    settings = load_settings()
+    ext_open = locate_ext_open()
+    settings = load_settings(ext_open)
     check_outstanding_changes(settings)
     head_branch = determine_head_branch()
     head_branch = push_to_personal(settings, head_branch)
@@ -22,6 +23,29 @@ def main():
     upstream_github_path = github_path_from_remote_name(settings['upstream'])
     personal_github_path = github_path_from_remote_name(settings['personal'])
     make_pull_request(settings, upstream_github_path, personal_github_path, base_branch, head_branch)
+
+def locate_ext_open():
+    # from http://stackoverflow.com/questions/377017/test-if-executable-exists-in-python
+    # Thanks, "Jay"!
+    def which(program):
+        def is_exe(fpath):
+            return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+        fpath, fname = os.path.split(program)
+        if fpath:
+            if is_exe(program):
+                return program
+        else:
+            for path in os.environ["PATH"].split(os.pathsep):
+                exe_file = os.path.join(path, program)
+                if is_exe(exe_file):
+                    return exe_file
+
+        return None
+    ext_open = which('open')
+    if ext_open is None:
+        ext_open = which('xdg-open')
+    return ext_open
 
 def check_outstanding_changes(settings):
     if settings['assume']:
@@ -31,7 +55,7 @@ def check_outstanding_changes(settings):
         subprocess.check_call(['git', 'status', '-s'])
         confirm_continue(settings, 'There are outstanding changes.')
 
-def load_settings():
+def load_settings(ext_open):
     settings = {}
     password_file = '%s/.githubpass' % os.environ['HOME']
     if not os.path.exists(password_file):
@@ -68,10 +92,11 @@ These options can also be set using `git config [--global] pullme.SETTING VALUE`
     setters.append(add_setting(parser, 'issue', None, {
         'help': 'Have github generate a title and body using an issue number',
     }))
-    setters.append(add_setting(parser, 'open', False, {
-        'action': 'store_true',
-        'help': 'Open the pull request URL using "open". Mac OS X specific.'
-    }))
+    if ext_open is not None:
+        setters.append(add_setting(parser, 'open', False, {
+            'action': 'store_true',
+            'help': 'Open the pull request URL using the `%s` command.' % ext_open,
+        }))
     (options, args) = parser.parse_args()
     for setter in setters:
         setter(settings, options)
@@ -257,7 +282,7 @@ def make_pull_request(settings, upstream_github_path,
         print "Successfully opened pull request #%s" % response['number']
         print response['html_url']
         if settings['open']:
-            check_output(['open', response['html_url']])
+            check_output([EXT_OPEN, response['html_url']])
     except urllib2.HTTPError, e:
         error = json.loads(e.read())
         sys.stderr.write("Pull request failed:\n")
