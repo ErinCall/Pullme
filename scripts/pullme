@@ -11,6 +11,8 @@ import json
 import getpass
 import base64
 
+DESCRIPTION_FILE = os.path.join('.', 'pullme_description')
+
 def main():
     settings = load_settings()
     check_outstanding_changes(settings)
@@ -277,7 +279,13 @@ and open an issue? https://github.com/AndrewLorente/PullMe/issues/new
 Please include this JSON:
 %s
 """ % json.dumps(error))
-                sys.exit(1)
+        if 'title' in description:
+            with open(DESCRIPTION_FILE, 'w') as description_file:
+                description_file.write(description['title'])
+                description_file.write('\n\n')
+                description_file.write(description['body'])
+                print 'the description has been stored in %s' % DESCRIPTION_FILE
+        sys.exit(1)
 
 def get_description(settings, base_branch, filename=None):
     filename = settings['file']
@@ -294,8 +302,8 @@ def get_description(settings, base_branch, filename=None):
         confirmation_settings['assume'] = False
         exit = lambda: sys.exit(1)
         def save_description():
-            os.rename(filename, 'pullme_description')
-            print 'the description has been stored in ./pullme_description'
+            os.rename(filename, DESCRIPTION_FILE)
+            print 'the description has been stored in %s' % DESCRIPTION_FILE
             sys.exit(1)
         if not settings['file']:
             exit = save_description
