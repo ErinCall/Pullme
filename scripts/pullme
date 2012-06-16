@@ -15,7 +15,7 @@ def main():
     settings = load_settings()
     check_outstanding_changes(settings)
     head_branch = determine_head_branch()
-    push_to_personal(settings, head_branch)
+    head_branch = push_to_personal(settings, head_branch)
     base_branch = determine_base_branch(settings)
     upstream_github_path = github_path_from_remote_name(settings['upstream'])
     personal_github_path = github_path_from_remote_name(settings['personal'])
@@ -133,6 +133,7 @@ def push_to_personal(settings, branch):
     )
     settings['personal'] = correct['remote']
     subprocess.check_call(['git', 'push', settings['personal'], 'HEAD:%s' % correct['branch']])
+    return correct['branch']
 
 def confirm_assumptions(settings, confirm_message, correction_message, **kwargs):
     if settings['assume']: return kwargs
