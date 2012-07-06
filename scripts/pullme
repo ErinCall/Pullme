@@ -10,6 +10,7 @@ import tempfile
 import json
 import getpass
 import base64
+import random
 
 DESCRIPTION_FILE = os.path.join('.', 'pullme_description')
 
@@ -420,4 +421,15 @@ try:
     main()
 except subprocess.CalledProcessError, e:
     sys.exit(e.returncode)
+except KeyboardInterrupt:
+    mollifications = [
+        "I don't hate you.",
+        "No hard feelings.",
+        "Was it something I said?",
+        "Did I do something wrong?",
+        "Surely we can work this out!",
+        "Maybe next time...",
+    ]
+    print "\n" + random.choice(mollifications)
+    sys.exit(1)
 
