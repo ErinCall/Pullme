@@ -159,7 +159,17 @@ def push_to_personal(settings, branch):
         branch=branch,
     )
     settings['personal'] = correct['remote']
-    subprocess.check_call(['git', 'push', settings['personal'], 'HEAD:%s' % correct['branch']])
+    git_command = ['git', 'push', settings['personal'], 'HEAD:%s' % correct['branch']]
+    git_push = subprocess.Popen(git_command, stderr=subprocess.PIPE)
+    status = git_push.wait()
+    if status != 0:
+        error = git_push.stderr.read()
+        sys.stderr.write(error)
+        if 'non-fast-forward' in error:
+            confirm_continue(settings, 'I can try a forced push.')
+            git_command.insert(2, '--force')
+            subprocess.check_call(git_command)
+
     return correct['branch']
 
 def confirm_assumptions(settings, confirm_message, correction_message, **kwargs):
